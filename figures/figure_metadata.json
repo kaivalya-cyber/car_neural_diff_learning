@@ -1,0 +1,38 @@
+[
+  {
+    "filename": "reward_vs_training_steps.svg",
+    "caption": "Episode reward trajectory over training, with a 10-episode moving average indicating progressive performance gains.",
+    "description": "This figure plots per-episode reward against logged training step and overlays a 10-episode moving average. The series shows high variance with an upward trend, reflecting increasing policy competence while preserving episodic stochasticity.",
+    "section": "Results"
+  },
+  {
+    "filename": "episode_length_vs_training_steps.svg",
+    "caption": "Episode length as a function of training step, with moving-average smoothing to reveal stability trends.",
+    "description": "Per-episode duration is plotted against training step to characterize survivability and control consistency. The moving-average line highlights changes in sustained driving behavior across training.",
+    "section": "Results"
+  },
+  {
+    "filename": "ppo_policy_value_losses.svg",
+    "caption": "PPO policy and value loss traces over logged optimization steps.",
+    "description": "This plot reports policy and critic losses from TensorBoard scalars in the selected training event file. The points correspond to optimizer update checkpoints and quantify the optimization dynamics observed in this run.",
+    "section": "Training Dynamics"
+  },
+  {
+    "filename": "crash_rate_vs_training_steps.svg",
+    "caption": "Binary crash outcomes and smoothed crash rate across training steps.",
+    "description": "Each point indicates whether an episode terminated by crash (1) or not (0), and the moving average summarizes the short-horizon failure rate. This view captures safety-related behavior throughout policy learning.",
+    "section": "Safety Analysis"
+  },
+  {
+    "filename": "curriculum_difficulty_vs_training_steps.svg",
+    "caption": "Curriculum difficulty level recorded over training steps.",
+    "description": "The curriculum scalar logged per episode is shown to track environment difficulty progression over time. In this run, the line reveals whether threshold-based level updates were reached.",
+    "section": "Method"
+  },
+  {
+    "filename": "hyperparameter_tuning_results.svg",
+    "caption": "Hyperparameter sweep outcomes showing final reward by configuration rank, colored by achieved curriculum level.",
+    "description": "Each point corresponds to one hyperparameter configuration from the tuning grid and reports the run-level final reward. Color encodes achieved curriculum level to jointly assess return quality and difficulty progression.",
+    "section": "Ablation / Hyperparameter Study"
+  }
+]

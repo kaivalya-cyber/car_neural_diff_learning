@@ -1,0 +1,17 @@
+run_name,learning_rate,gamma,k_epochs,eps_clip,final_reward,curriculum_level,sim_num_envs,sim_max_episodes,sim_update_timestep,data_origin
+sim_run_2,0.0003,0.99,8,0.2,96.54558054180984,0.0,4,24,200,bounded_simulation_from_training_modules
+sim_run_5,0.0003,0.95,4,0.1,51.40729645839848,0.0,4,24,200,bounded_simulation_from_training_modules
+sim_run_12,0.001,0.95,4,0.2,50.81020399053525,0.0,4,24,200,bounded_simulation_from_training_modules
+sim_run_10,0.001,0.99,8,0.2,42.81017901065305,0.0,4,24,200,bounded_simulation_from_training_modules
+sim_run_14,0.001,0.95,8,0.2,38.564221815207304,0.0,4,24,200,bounded_simulation_from_training_modules
+sim_run_0,0.0003,0.99,4,0.2,25.534743904616203,0.0,4,24,200,bounded_simulation_from_training_modules
+sim_run_11,0.001,0.99,8,0.1,21.666968313964603,0.0,4,24,200,bounded_simulation_from_training_modules
+sim_run_9,0.001,0.99,4,0.1,21.660079100883944,0.0,4,24,200,bounded_simulation_from_training_modules
+sim_run_1,0.0003,0.99,4,0.1,20.586592466394865,0.0,4,24,200,bounded_simulation_from_training_modules
+sim_run_3,0.0003,0.99,8,0.1,20.206177526494876,0.0,4,24,200,bounded_simulation_from_training_modules
+sim_run_4,0.0003,0.95,4,0.2,18.42408560597173,0.0,4,24,200,bounded_simulation_from_training_modules
+sim_run_6,0.0003,0.95,8,0.2,15.106655454118874,0.0,4,24,200,bounded_simulation_from_training_modules
+sim_run_15,0.001,0.95,8,0.1,10.993183882731348,0.0,4,24,200,bounded_simulation_from_training_modules
+sim_run_13,0.001,0.95,4,0.1,10.718113853509598,0.0,4,24,200,bounded_simulation_from_training_modules
+sim_run_7,0.0003,0.95,8,0.1,5.338621965631768,0.0,4,24,200,bounded_simulation_from_training_modules
+sim_run_8,0.001,0.99,4,0.2,5.162170649648248,0.0,4,24,200,bounded_simulation_from_training_modules

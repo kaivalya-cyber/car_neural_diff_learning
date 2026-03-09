@@ -1,0 +1,4 @@
+learning_rate: [0.0003, 0.001]
+gamma: [0.99, 0.95]
+k_epochs: [4, 8]
+eps_clip: [0.2, 0.1]

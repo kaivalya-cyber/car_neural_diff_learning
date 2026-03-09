@@ -1,0 +1,8 @@
+learning_rate: 0.0003
+gamma: 0.99
+k_epochs: 4
+eps_clip: 0.2
+max_episodes: 2000
+max_steps_per_episode: 1000
+update_timestep: 500
+num_envs: 32

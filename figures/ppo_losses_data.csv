@@ -1,0 +1,4 @@
+training_step,policy_loss,value_loss,event_file
+49,-0.03710360825061798,0.4935503900051117,rl_car_rl/logs/train/events.out.tfevents.1772928508.Kaivalyas-MacBook-Air.local.39244.0
+85,0.0004520169459283352,0.49709194898605347,rl_car_rl/logs/train/events.out.tfevents.1772928508.Kaivalyas-MacBook-Air.local.39244.0
+138,0.010370904579758644,0.4978675842285156,rl_car_rl/logs/train/events.out.tfevents.1772928508.Kaivalyas-MacBook-Air.local.39244.0
