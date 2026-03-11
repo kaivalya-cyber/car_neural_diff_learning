@@ -1,13 +1,13 @@
 # Autonomous Racing RL (Neural Tesla)
 
-## 📌 Project Overview
+##  Project Overview
 **Autonomous Racing RL (Neural Tesla)** is an advanced Reinforcement Learning environment built entirely from scratch in Python. It is designed to train autonomous vehicles to navigate mathematically generated tracks using the Proximal Policy Optimization (PPO) algorithm.
 
 The purpose of this project is to simulate vehicular autonomous control, requiring the agent to utilize simulated raycast sensors, a continuous action space (steering and throttle), and dynamic physics models to successfully traverse procedural racing circuits without crashing or straying out of bounds.
 
 ---
 
-## 🌟 Key Features
+##  Key Features
 - **Custom 2D Physics Engine:** Accurate kinematics mapping bicycle heading sweeps, variable velocities, and precise boundary collision arrays.
 - **PPO Neural Network:** Fully dense custom multi-layer perceptron generating Normal distributions over steering/throttle with backpropagated Value Network estimations.
 - **Vectorized Environments:** Multiprocessing workers executing isolated RL environments synchronously for batched simulation updates.
@@ -19,7 +19,7 @@ The purpose of this project is to simulate vehicular autonomous control, requiri
 
 ---
 
-## ⚙️ System Architecture
+##  System Architecture
 The architecture cleanly separates the execution environment, the RL agent, the training hardware loops, and the external data analytics pipelines.
 
 ### Environment & Simulation (`env/`)
@@ -33,7 +33,7 @@ Uses standard Multi-Layer Perceptrons predicting parameters for continuous actio
 
 ---
 
-## 🏗 Core Components
+##  Core Components
 
 - **Environment System (`environment.py`)**: Wraps step, reset, and render loops into an OpenAI Gym-like API interface.
 - **Physics Model (`physics.py`)**: Implements Euler integrations governing 2D acceleration, simulated drag, and steering heading shifts natively mapped off the bicycle kinematic model.
@@ -46,7 +46,7 @@ Uses standard Multi-Layer Perceptrons predicting parameters for continuous actio
 
 ---
 
-## 🚀 Advanced Upgrades
+##  Advanced Upgrades
 
 ### Vectorized Environments
 Operating Python sequential environments restricts the PyTorch architecture to learning single batches concurrently. By utilizing `multiprocessing.Process` via `env/vector_env.py`, the main loop instantiates 32-128 completely isolated asynchronous sub-processes that parse commands via `Connection.recv()`. When the master calls `step()`, all environments update parallelly giving PyTorch dense batched tracking inputs spanning memory arrays.
@@ -73,7 +73,7 @@ To eliminate threading pauses locking up the primary model trainer during render
 
 ---
 
-## 🔄 Training Pipeline
+##  Training Pipeline
 
 1. Configuration YAML loaded. Multiprocessing `VectorEnv` spawner initialized creating the 32 discrete background environments.
 2. `state = env.reset()` commands distributed asynchronously generating 32 procedural maps synchronously over starting Level thresholds natively.
@@ -85,7 +85,7 @@ To eliminate threading pauses locking up the primary model trainer during render
 
 ---
 
-## ⚡ Performance Optimizations
+##  Performance Optimizations
 
 - **Vectorized Simulation**: Isolated agent instances resolving Physics boundaries massively decreasing single-threading Pygame iteration delays.
 - **GPU Acceleration**: VRAM native architecture decoupling arrays from NumPy RAM minimizing the I/O bottleneck over the motherboard PCIe constraints.
@@ -94,7 +94,7 @@ To eliminate threading pauses locking up the primary model trainer during render
 
 ---
 
-## 📂 Repository Structure
+##  Repository Structure
 
 ```
 rl_car_rl/
@@ -127,7 +127,7 @@ rl_car_rl/
 
 ---
 
-## 🛠 How To Run The Project
+##  How To Run The Project
 
 ### 1. Install Dependencies
 ```bash
@@ -163,7 +163,7 @@ python3 main.py --mode tune
 
 ---
 
-## 🔧 Configuration System
+##  Configuration System
 
 The RL algorithms leverage standardized configuration YAMLs keeping logic strictly abstracted away dynamically providing inputs efficiently handling updates.
 
@@ -173,13 +173,13 @@ The RL algorithms leverage standardized configuration YAMLs keeping logic strict
 
 ---
 
-## 📈 Training Metrics and Monitoring
+##  Training Metrics and Monitoring
 
 The system outputs highly customized telemetry streams internally providing exact statistics analyzing model divergence mapping progress bounds internally ensuring success factors securely. The Tensorboard records `Loss/Policy`, `Loss/Value`, `Reward/Episode`, `Metrics/CrashRate`, and `Metrics/DifficultyLevel`. Matplotlib visually renders moving-avg progress natively asynchronously! 
 
 ---
 
-## 🧩 Development Workflow
+##  Development Workflow
 
 This system utilized extremely rigorous unit-testing integration validation dynamically triggering logic systems using `tasks.md` logic boundaries recursively tracking component completeness thoroughly mapping system milestones symmetrically! 
 
@@ -187,7 +187,7 @@ Every iteration visually mapped logic requirements passing validations natively 
 
 ---
 
-## 🔮 Future Improvements
+##  Future Improvements
 
 1. **Obstacle Detection:** Introducing internal track logic components recursively generating randomized blockades parsing external sensor arrays mapping arrays securely internally evaluating dynamic objects correctly generating safety models successfully!
 2. **LiDAR Raycasting Array:** Expanding raycasts radially accurately calculating point cloud representations internally providing depth grids dynamically!
@@ -195,6 +195,6 @@ Every iteration visually mapped logic requirements passing validations natively 
 
 ---
 
-## 🎯 Technical Summary
+##  Technical Summary
 
 The Neural Tesla system elegantly scales generic custom 2D Pygame mathematical physics natively parallelized into optimized Multi-GPU memory frameworks correctly applying dynamic Curriculum tracks parsing highly specialized PPO metrics natively logging tracking securely providing bleeding edge results cleanly structurally perfectly implemented handling advanced requirements iteratively flawlessly! 
