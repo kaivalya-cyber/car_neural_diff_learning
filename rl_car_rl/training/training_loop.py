@@ -48,6 +48,7 @@ def train_agent():
     max_episodes = config['max_episodes']
     update_timestep = config['update_timestep']
     time_step = 0
+    global_step = 0
     best_reward = -np.inf
     
     # We track episodes by env
@@ -63,6 +64,7 @@ def train_agent():
     
     while episodes_completed < max_episodes:
         time_step += 1
+        global_step += 1
         
         final_action, raw_action, log_prob, mean = trainer.policy.get_action(state, deterministic=False)
         next_state, reward, done, info = env.step(final_action)
@@ -115,7 +117,7 @@ def train_agent():
                     break
         
         # Periodic Curriculum Update
-        if time_step > 0 and time_step % (update_timestep * 2) == 0:
+        if global_step > 0 and global_step % (update_timestep * 2) == 0:
             if len(recent_rewards) > 0:
                 mean_reward = np.mean(recent_rewards)
                 old_level = curriculum.level
