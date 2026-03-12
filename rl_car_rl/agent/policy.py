@@ -19,8 +19,9 @@ class RacingPolicy:
         Returns batched numpy array of actions (num_envs, action_dim).
         """
         state = np.array(state)
+        single_input = (len(state.shape) == 1)
         # Ensure 2D tensor
-        if len(state.shape) == 1:
+        if single_input:
             state = np.expand_dims(state, 0)
             
         # Push to device natively
@@ -47,7 +48,7 @@ class RacingPolicy:
             final_action[:, 1] = np.clip(action_np[:, 1], 0.0, 1.0) # throttle
 
         # If it was a single state input, squeeze back
-        if len(state) == 1:
+        if single_input:
             final_action = final_action[0]
             action = action[0]
             log_prob = log_prob[0]

@@ -8,12 +8,22 @@ from training.curriculum import CurriculumManager
 from torch.utils.tensorboard import SummaryWriter
 import torch
 
-def train_agent():
-    config_path = os.path.join("configs", "hyperparameters.yaml")
+def train_agent(config_overrides=None, output_dir=None, use_curriculum=True, seed=None):
+    project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    config_path = os.path.join(project_dir, "configs", "hyperparameters.yaml")
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
+    if config_overrides:
+        config.update(config_overrides)
 
     num_envs = config.get('num_envs', 64)
+    if seed is not None:
+        import random
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(seed)
     env = VectorEnv(num_envs=num_envs)
     
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
@@ -32,9 +42,11 @@ def train_agent():
     memory = Memory()
     
     # Setup TensorBoard and CSV logging
-    os.makedirs("logs", exist_ok=True)
-    writer = SummaryWriter(log_dir="logs/train")
-    csv_path = os.path.join("logs", "metrics.csv")
+    base_dir = output_dir or project_dir
+    logs_dir = os.path.join(base_dir, "logs")
+    os.makedirs(logs_dir, exist_ok=True)
+    writer = SummaryWriter(log_dir=os.path.join(logs_dir, "train"))
+    csv_path = os.path.join(logs_dir, "metrics.csv")
     
     # Init CSV header
     with open(csv_path, "w") as f:
@@ -43,7 +55,8 @@ def train_agent():
     curriculum = CurriculumManager()
     
     # Initialize env with start difficulty
-    env.set_difficulty(curriculum.get_generation_params())
+    if use_curriculum:
+        env.set_difficulty(curriculum.get_generation_params())
     
     max_episodes = config['max_episodes']
     update_timestep = config['update_timestep']
@@ -103,11 +116,11 @@ def train_agent():
                 # Checkpoints
                 if current_ep_rewards[i] > best_reward:
                     best_reward = current_ep_rewards[i]
-                    trainer.save(is_best=True)
+                    trainer.save(is_best=True, checkpoint_dir=os.path.join(base_dir, "checkpoints"))
                     print(f"Saved new best model @ Reward {best_reward:.2f}")
                     
                 if episodes_completed % 50 == 0:
-                    trainer.save(is_best=False)
+                    trainer.save(is_best=False, checkpoint_dir=os.path.join(base_dir, "checkpoints"))
                 
                 # Reset tracking for this env
                 current_ep_rewards[i] = 0
@@ -117,7 +130,7 @@ def train_agent():
                     break
         
         # Periodic Curriculum Update
-        if global_step > 0 and global_step % (update_timestep * 2) == 0:
+        if use_curriculum and global_step > 0 and global_step % (update_timestep * 2) == 0:
             if len(recent_rewards) > 0:
                 mean_reward = np.mean(recent_rewards)
                 old_level = curriculum.level

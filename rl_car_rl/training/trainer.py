@@ -113,8 +113,7 @@ class PPOTrainer:
             
         return total_policy_loss / self.K_epochs, total_value_loss / self.K_epochs
             
-    def save(self, is_best=False):
-        checkpoint_dir = "checkpoints"
+    def save(self, is_best=False, checkpoint_dir="checkpoints"):
         os.makedirs(checkpoint_dir, exist_ok=True)
         path = f"{checkpoint_dir}/latest.pth" if not is_best else f"{checkpoint_dir}/best.pth"
         

@@ -2,6 +2,9 @@
 
 All timestamps are local time (America/Los_Angeles).
 
+## 2026-03-11 23:02:11 PDT
+- Fixed single-environment action handling by preventing unintended action squeezing and normalizing `VectorEnv.step` input shape. Files: `rl_car_rl/agent/policy.py`, `rl_car_rl/env/vector_env.py`.
+
 ## 2026-03-11 22:30:59 PDT
 - Fixed curriculum difficulty staying flat by introducing a monotonically increasing `global_step` for curriculum updates. File: `rl_car_rl/training/training_loop.py`.
 

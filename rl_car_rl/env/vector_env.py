@@ -63,6 +63,9 @@ class VectorEnv:
         """
         actions: list or array of shape (num_envs, action_dim)
         """
+        actions = np.array(actions)
+        if actions.ndim == 1:
+            actions = np.expand_dims(actions, 0)
         for remote, action in zip(self.remotes, actions):
             remote.send(('step', action))
             
