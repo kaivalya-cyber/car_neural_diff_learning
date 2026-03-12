@@ -5,8 +5,8 @@ from env.environment import CarEnv
 class Renderer:
     def __init__(self, env: CarEnv, fps=60):
         self.env = env
-        self.width = env.track.track_width
-        self.height = env.track.track_height
+        self.width = getattr(env.track, "track_width_px", env.track.track_width)
+        self.height = getattr(env.track, "track_height_px", env.track.track_width)
         
         pygame.init()
         self.screen = pygame.display.set_mode((self.width, self.height))

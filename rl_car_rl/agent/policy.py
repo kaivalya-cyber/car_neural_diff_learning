@@ -27,14 +27,15 @@ class RacingPolicy:
         state_tensor = torch.tensor(state, dtype=torch.float32, device=self.device)
         
         with torch.no_grad() if deterministic else torch.enable_grad():
-            mean = self.net(state_tensor)
-            std = self.log_std.exp().expand_as(mean)
+            # Ensure all tensors used by the distribution are on the same device
+            mean = self.net(state_tensor).to(self.device)
+            std = self.log_std.exp().expand_as(mean).to(self.device)
             dist = Normal(mean, std)
             
             if deterministic:
                 action = mean
             else:
-                action = dist.sample()
+                action = dist.sample().to(self.device)
                 
             log_prob = dist.log_prob(action).sum(dim=-1)
             

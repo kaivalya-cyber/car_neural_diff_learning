@@ -3,7 +3,11 @@ import math
 
 class Track:
     def __init__(self, track_width=80):
+        # track_width is the drivable lane width, not the world size
         self.track_width = track_width
+        # World size used by the renderer
+        self.track_width_px = 1000
+        self.track_height_px = 1000
         self.center_points = []
         self.outer_boundary = []
         self.inner_boundary = []
@@ -17,8 +21,8 @@ class Track:
         angles = np.linspace(0, 2 * np.pi, num_control_points, endpoint=False)
         radii = np.random.uniform(min_radius, max_radius, size=num_control_points)
         
-        # Center of the track (arbitrary anchor to avoid negatives initially)
-        cx, cy = 500.0, 500.0
+        # Center of the track (anchor to world dimensions)
+        cx, cy = self.track_width_px / 2.0, self.track_height_px / 2.0
         
         # Calculate control points
         control_points = []
@@ -28,7 +32,7 @@ class Track:
             control_points.append((x, y))
             
         # Catmull-Rom Spline interpolation to make smooth track
-        self.center_points = self._compute_catmull_rom_spline(control_points, points_per_segment=10)
+        self.center_points = self._compute_catmull_rom_spline(control_points, points_per_segment=20)
         
         # Generate inner and outer boundaries
         self._generate_boundaries()
@@ -69,27 +73,42 @@ class Track:
         n = len(self.center_points)
         
         for i in range(n):
-            p1 = self.center_points[i]
-            p2 = self.center_points[(i + 1) % n]
-            
-            dx = p2[0] - p1[0]
-            dy = p2[1] - p1[1]
-            length = math.hypot(dx, dy)
-            if length == 0:
+            p_prev = self.center_points[(i - 1) % n]
+            p_curr = self.center_points[i]
+            p_next = self.center_points[(i + 1) % n]
+
+            v1 = np.array([p_curr[0] - p_prev[0], p_curr[1] - p_prev[1]], dtype=np.float64)
+            v2 = np.array([p_next[0] - p_curr[0], p_next[1] - p_curr[1]], dtype=np.float64)
+
+            len1 = math.hypot(v1[0], v1[1])
+            len2 = math.hypot(v2[0], v2[1])
+            if len1 == 0 or len2 == 0:
                 continue
-                
+
+            v1 /= len1
+            v2 /= len2
+
+            # Use averaged tangent to reduce sharp boundary kinks
+            tangent = v1 + v2
+            tlen = math.hypot(tangent[0], tangent[1])
+            if tlen < 1e-6:
+                tangent = v2
+                tlen = math.hypot(tangent[0], tangent[1])
+                if tlen < 1e-6:
+                    continue
+            tangent /= tlen
+
             # Normal vector (rotate 90 degrees)
-            nx = -dy / length
-            ny = dx / length
-            
+            nx = -tangent[1]
+            ny = tangent[0]
+
             # Offset by half track width
             half_width = self.track_width / 2.0
-            
+
             # Inner (left) and outer (right) bound based on counter-clockwise direction
             # Normal (nx, ny) points inward.
-            # So adding it goes to the inner boundary, subtracting goes to outer boundary.
-            self.inner_boundary.append((p1[0] + nx * half_width, p1[1] + ny * half_width))
-            self.outer_boundary.append((p1[0] - nx * half_width, p1[1] - ny * half_width))
+            self.inner_boundary.append((p_curr[0] + nx * half_width, p_curr[1] + ny * half_width))
+            self.outer_boundary.append((p_curr[0] - nx * half_width, p_curr[1] - ny * half_width))
 
     def _pick_start_pose(self):
         """Randomly selects a start point on the spline and aligns heading with tangent."""
