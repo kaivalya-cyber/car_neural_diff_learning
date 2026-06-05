@@ -39,6 +39,10 @@ class PPOTrainer:
         lr_warmup_start_factor: float = 0.1,
         entropy_coef: float = 0.01,
         entropy_decay: float = 1.0,
+        normalize_rewards: bool = True,
+        ou_sigma: float = 0.0,
+        ou_theta: float = 0.15,
+        ou_sigma_decay: float = 1.0,
         device: str = "cpu",
     ):
         self.gamma = gamma
@@ -54,12 +58,18 @@ class PPOTrainer:
         self.device = torch.device(device)
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self._update_count = 0  # tracks number of PPO updates for warmup
+        self._update_count = 0
         self.initial_policy_lr = lr
         self.initial_value_lr = lr
+        self.normalize_rewards = normalize_rewards
 
-        # Policy network
-        self.policy = RacingPolicy(state_dim, action_dim, device)
+        # Policy network with optional OU noise
+        self.policy = RacingPolicy(
+            state_dim, action_dim, device,
+            ou_sigma=ou_sigma,
+            ou_theta=ou_theta,
+            ou_sigma_decay=ou_sigma_decay,
+        )
         self.optimizer = optim.Adam(
             [
                 {"params": self.policy.net.parameters(), "lr": lr},
@@ -153,6 +163,12 @@ class PPOTrainer:
         # Flatten to [T * num_envs]
         advantages = advantages.view(-1)
         returns = returns.view(-1)
+
+        # Normalize rewards per batch (before GAE if enabled)
+        if self.normalize_rewards:
+            r_mean = rewards_tensor.mean()
+            r_std = rewards_tensor.std() + 1e-7
+            rewards_tensor = (rewards_tensor - r_mean) / r_std
 
         # Normalize advantages
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-7)

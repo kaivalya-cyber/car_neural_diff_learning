@@ -9,6 +9,10 @@ lr_warmup_epochs: 10
 lr_warmup_start_factor: 0.1
 entropy_coef: 0.01
 entropy_decay: 0.9995
+normalize_rewards: true
+ou_sigma: 0.0
+ou_theta: 0.15
+ou_sigma_decay: 1.0
 max_episodes: 2000
 max_steps_per_episode: 1000
 update_timestep: 500
@@ -19,3 +23,12 @@ val_interval: 50
 early_stop_patience: 200
 early_stop_min_delta: 0.5
 top_k_checkpoints: 3
+curriculum_start: 0.0
+curriculum_min: 0.0
+curriculum_max: 1.0
+curriculum_up_threshold: 40.0
+curriculum_down_threshold: 10.0
+curriculum_up_rate: 0.05
+curriculum_down_rate: 0.03
+curriculum_threshold_growth: 1.01
+curriculum_window: 10

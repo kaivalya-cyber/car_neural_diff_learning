@@ -100,6 +100,10 @@ def train_agent(
         entropy_decay=config.get("entropy_decay", 1.0),
         lr_warmup_epochs=config.get("lr_warmup_epochs", 0),
         lr_warmup_start_factor=config.get("lr_warmup_start_factor", 0.1),
+        normalize_rewards=config.get("normalize_rewards", True),
+        ou_sigma=config.get("ou_sigma", 0.0),
+        ou_theta=config.get("ou_theta", 0.15),
+        ou_sigma_decay=config.get("ou_sigma_decay", 1.0),
         device=str(device),
     )
 
@@ -149,7 +153,18 @@ def train_agent(
                 "episode,reward,length,crash_rate,difficulty,center_distance,laps\n"
             )
 
-    curriculum = CurriculumManager()
+    curriculum = CurriculumManager(
+        start_level=config.get("curriculum_start", 0.0),
+        min_level=config.get("curriculum_min", 0.0),
+        max_level=config.get("curriculum_max", 1.0),
+        increase_threshold=config.get("curriculum_up_threshold", 40.0),
+        decrease_threshold=config.get("curriculum_down_threshold", 10.0),
+        increase_rate=config.get("curriculum_up_rate", 0.05),
+        decrease_rate=config.get("curriculum_down_rate", 0.03),
+        threshold_growth=config.get("curriculum_threshold_growth", 1.01),
+        window_size=config.get("curriculum_window", 10),
+        min_samples=config.get("curriculum_min_samples", 5),
+    )
 
     if use_curriculum:
         env.set_difficulty(curriculum.get_generation_params())
@@ -321,6 +336,8 @@ def train_agent(
                 # Reset tracking for this env
                 current_ep_rewards[i] = 0
                 current_ep_lengths[i] = 0
+                # Reset OU noise at episode boundary for cleaner exploration
+                trainer.policy.reset_noise()
 
                 if episodes_completed >= max_episodes:
                     break
@@ -343,19 +360,35 @@ def train_agent(
             if len(recent_rewards) > 0:
                 mean_reward = np.mean(recent_rewards)
                 old_level = curriculum.level
-                new_level = curriculum.update(mean_reward)
+                new_level = curriculum.update()
 
                 writer.add_scalar(
                     "Metrics/DifficultyLevel", new_level, episodes_completed
                 )
+                stats = curriculum.get_stats()
+                writer.add_scalar(
+                    "Curriculum/RollingMean", stats["rolling_mean"], episodes_completed
+                )
+                writer.add_scalar(
+                    "Curriculum/Threshold", stats["increase_threshold"], episodes_completed
+                )
 
                 if new_level > old_level:
                     print(
-                        f"Curriculum Level Upgraded to {new_level:.2f}! "
-                        f"(Mean Reward: {mean_reward:.2f})"
+                        f"Curriculum Level ↑ to {new_level:.2f}! "
+                        f"(Mean: {mean_reward:.2f})"
+                    )
+                    env.set_difficulty(curriculum.get_generation_params())
+                elif new_level < old_level:
+                    print(
+                        f"Curriculum Level ↓ to {new_level:.2f}! "
+                        f"(Mean: {mean_reward:.2f})"
                     )
                     env.set_difficulty(curriculum.get_generation_params())
 
+                # Add all recent rewards to curriculum window
+                for r in recent_rewards:
+                    curriculum.add_reward(r)
                 recent_rewards = []
 
         # Update policy
