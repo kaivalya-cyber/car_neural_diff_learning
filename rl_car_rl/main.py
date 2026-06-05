@@ -156,7 +156,7 @@ def load_preset(name: str) -> dict | None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="RL Car Agent Execution")
-    parser.add_argument("--mode", choices=["train", "evaluate", "tune", "race", "export", "dataset", "clone", "benchmark", "analytics"], default="train")
+    parser.add_argument("--mode", choices=["train", "evaluate", "tune", "race", "export", "dataset", "clone", "benchmark", "analytics", "smoke-test", "self-play"], default="train")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--episodes", type=int, default=10)
     parser.add_argument("--no-render", action="store_true")
@@ -238,3 +238,25 @@ if __name__ == "__main__":
             window=args.window,
             dpi=args.dpi,
         )
+    elif args.mode == "smoke-test":
+        print("Running smoke test (50 episodes, fast validation)...")
+        smoke_config = {
+            "max_episodes": 50,
+            "num_envs": 4,
+            "sensor_count": 8,
+            "early_stop_patience": 100,
+            "hidden_size": 64,
+            "num_blocks": 1,
+            "update_timestep": 100,
+            "val_interval": 25,
+            "action_repeat": 2,
+        }
+        train_agent(config_overrides=smoke_config)
+        print("Smoke test passed — training completed without errors.")
+    elif args.mode == "self-play":
+        from self_play import train_self_play
+        overrides = preset if args.preset else {}
+        if args.track_type:
+            overrides = dict(overrides)
+            overrides["track_type"] = args.track_type
+        train_self_play(config_overrides=overrides if overrides else None)

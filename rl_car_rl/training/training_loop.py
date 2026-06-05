@@ -111,6 +111,7 @@ def train_agent(
         hidden_size=config.get("hidden_size", 256),
         num_blocks=config.get("num_blocks", 2),
         dropout=config.get("dropout", 0.0),
+        lr_schedule=config.get("lr_schedule", "exponential"),
         device=str(device),
     )
 
@@ -133,10 +134,25 @@ def train_agent(
     # Setup experiment tracking
     tracker = ExperimentTracker(output_dir=logs_dir, config=config)
 
+    # Setup wandb logging if enabled
+    wandb_logger = None
+    if config.get("use_wandb", False):
+        from training.wandb_logger import WandbLogger
+        wandb_logger = WandbLogger(
+            config=config,
+            project=config.get("wandb_project", "rl-car-racing"),
+            name=config.get("wandb_run_name", None),
+            tags=config.get("wandb_tags", []),
+        )
+
     # Setup TensorBoard and CSV logging
     logs_dir = os.path.join(base_dir, "logs")
     os.makedirs(logs_dir, exist_ok=True)
     writer = SummaryWriter(log_dir=os.path.join(logs_dir, "train"))
+
+    # Log config to wandb/tensorboard
+    if wandb_logger:
+        wandb_logger.log({"config/learning_rate": config["learning_rate"]}, step=0)
 
     # Determine CSV write mode
     csv_path = os.path.join(logs_dir, "metrics.csv")
@@ -269,6 +285,16 @@ def train_agent(
                         f"{current_ep_lengths[i]},{crash_rate},"
                         f"{curriculum.level:.4f},{center_dist:.4f},{laps_done},{track_type}\n"
                     )
+
+                # Log to wandb
+                if wandb_logger:
+                    wandb_logger.log({
+                        "episode/reward": current_ep_rewards[i],
+                        "episode/length": current_ep_lengths[i],
+                        "episode/crash_rate": crash_rate,
+                        "metrics/center_distance": center_dist,
+                        "metrics/laps": laps_done,
+                    }, step=episodes_completed)
 
                 if episodes_completed % 10 == 0:
                     fps = int(
@@ -437,6 +463,12 @@ def train_agent(
             p_loss, v_loss = trainer.update(memory, final_value=final_value)
             writer.add_scalar("Loss/Policy", p_loss, episodes_completed)
             writer.add_scalar("Loss/Value", v_loss, episodes_completed)
+            if wandb_logger:
+                wandb_logger.log({
+                    "loss/policy": p_loss,
+                    "loss/value": v_loss,
+                    "loss/entropy_coef": trainer.entropy_coef,
+                }, step=episodes_completed)
 
             memory.clear_memory()
             time_step = 0
@@ -458,4 +490,8 @@ def train_agent(
         f"Training Complete. Best reward: {best_reward:.2f}, "
         f"Episodes: {episodes_completed}"
     )
+    if wandb_logger:
+        wandb_logger.summary("best_reward", float(best_reward))
+        wandb_logger.summary("episodes_completed", episodes_completed)
+        wandb_logger.close()
     env.close()

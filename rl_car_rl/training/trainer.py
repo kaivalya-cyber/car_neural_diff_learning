@@ -47,6 +47,7 @@ class PPOTrainer:
         hidden_size: int = 256,
         num_blocks: int = 2,
         dropout: float = 0.0,
+        lr_schedule: str = "exponential",
         device: str = "cpu",
     ):
         self.gamma = gamma
@@ -67,6 +68,10 @@ class PPOTrainer:
         self.initial_value_lr = lr
         self.normalize_rewards = normalize_rewards
         self.gradient_accumulation_steps = max(1, gradient_accumulation_steps)
+        self.hidden_size = hidden_size
+        self.num_blocks = num_blocks
+        self.dropout = dropout
+        self.lr_schedule = lr_schedule
 
         # Policy network with optional OU noise
         self.policy = RacingPolicy(
@@ -99,14 +104,26 @@ class PPOTrainer:
         self.value_optimizer = optim.Adam(self.value_net.parameters(), lr=lr)
 
         # Learning rate schedulers
-        self.policy_scheduler = optim.lr_scheduler.ExponentialLR(
-            self.optimizer, gamma=lr_decay
-        )
-        self.value_scheduler = optim.lr_scheduler.ExponentialLR(
-            self.value_optimizer, gamma=lr_decay
-        )
+        self._build_schedulers()
 
         self.MseLoss = nn.MSELoss()
+
+    def _build_schedulers(self):
+        """Build LR schedulers based on schedule type."""
+        if self.lr_schedule == "cosine":
+            self.policy_scheduler = optim.lr_scheduler.CosineAnnealingLR(
+                self.optimizer, T_max=200, eta_min=self.initial_policy_lr * 0.01
+            )
+            self.value_scheduler = optim.lr_scheduler.CosineAnnealingLR(
+                self.value_optimizer, T_max=200, eta_min=self.initial_value_lr * 0.01
+            )
+        else:
+            self.policy_scheduler = optim.lr_scheduler.ExponentialLR(
+                self.optimizer, gamma=self.lr_decay
+            )
+            self.value_scheduler = optim.lr_scheduler.ExponentialLR(
+                self.value_optimizer, gamma=self.lr_decay
+            )
 
     def update(self, memory: Memory, final_value: torch.Tensor | None = None) -> tuple[float, float]:
         """
