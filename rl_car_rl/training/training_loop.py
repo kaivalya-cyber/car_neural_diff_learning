@@ -10,11 +10,11 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 
 
-def run_validation_episode(trainer, device, sensor_count, obstacle_count=0):
+def run_validation_episode(trainer, device, sensor_count, obstacle_count=0, track_type="procedural"):
     """Run one deterministic evaluation episode on a single environment."""
     from env.environment import CarEnv
 
-    eval_env = CarEnv(sensor_count=sensor_count, obstacle_count=obstacle_count)
+    eval_env = CarEnv(sensor_count=sensor_count, obstacle_count=obstacle_count, track_type=track_type)
     state = eval_env.reset()
     total_reward = 0.0
     steps = 0
@@ -64,6 +64,7 @@ def train_agent(
     num_envs = config.get("num_envs", 64)
     sensor_count = config.get("sensor_count", 16)
     obstacle_count = config.get("obstacle_count", 0)
+    track_type = config.get("track_type", "procedural")
     state_dim = sensor_count + 4  # sensors + velocity, heading, angular_vel, center_dist
 
     if seed is not None:
@@ -75,7 +76,7 @@ def train_agent(
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(seed)
 
-    env = VectorEnv(num_envs=num_envs, sensor_count=sensor_count, obstacle_count=obstacle_count)
+    env = VectorEnv(num_envs=num_envs, sensor_count=sensor_count, obstacle_count=obstacle_count, track_type=track_type)
 
     device = torch.device(
         "cuda"
@@ -157,7 +158,7 @@ def train_agent(
     else:
         with open(csv_path, "w") as f:
             f.write(
-                "episode,reward,length,crash_rate,difficulty,center_distance,laps\n"
+                "episode,reward,length,crash_rate,difficulty,center_distance,laps,track_type\n"
             )
 
     curriculum = CurriculumManager(
@@ -264,7 +265,7 @@ def train_agent(
                     f.write(
                         f"{episodes_completed},{current_ep_rewards[i]:.4f},"
                         f"{current_ep_lengths[i]},{crash_rate},"
-                        f"{curriculum.level:.4f},{center_dist:.4f},{laps_done}\n"
+                        f"{curriculum.level:.4f},{center_dist:.4f},{laps_done},{track_type}\n"
                     )
 
                 if episodes_completed % 10 == 0:
@@ -338,7 +339,7 @@ def train_agent(
                 ):
                     val_reward, val_steps, val_crashed, val_laps = (
                         run_validation_episode(
-                            trainer, device, eval_sensor_count, obstacle_count
+                            trainer, device, eval_sensor_count, obstacle_count, track_type
                         )
                     )
                     writer.add_scalar(

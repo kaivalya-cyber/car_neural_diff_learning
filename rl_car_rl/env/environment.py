@@ -7,7 +7,7 @@ from env.physics import PhysicsEngine
 
 
 class CarEnv:
-    def __init__(self, sensor_count: int = 16, sensor_max_distance: float = 150.0, obstacle_count: int = 0):
+    def __init__(self, sensor_count: int = 16, sensor_max_distance: float = 150.0, obstacle_count: int = 0, track_type: str = "procedural"):
         self.car = Car()
         self.track = Track()
         self.physics = PhysicsEngine()
@@ -18,6 +18,7 @@ class CarEnv:
         )
         self.sensor_count = sensor_count
         self.obstacle_count = obstacle_count
+        self.track_type = track_type
         self.state_dim = sensor_count + 4
         self.max_steps = 1000
         self.current_step = 0
@@ -32,7 +33,7 @@ class CarEnv:
         self.track_params = params
 
     def reset(self) -> np.ndarray:
-        self.track.generate(obstacle_count=self.obstacle_count, **self.track_params)
+        self.track.generate(obstacle_count=self.obstacle_count, track_type=self.track_type, **self.track_params)
         start = self.track.start_pose
         self.car.reset(start["x"], start["y"], start["heading"])
         self.current_step = 0

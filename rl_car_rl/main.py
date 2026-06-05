@@ -142,7 +142,7 @@ def load_preset(name: str) -> dict | None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="RL Car Agent Execution")
-    parser.add_argument("--mode", choices=["train", "evaluate", "tune", "race", "export", "dataset", "clone", "benchmark"], default="train")
+    parser.add_argument("--mode", choices=["train", "evaluate", "tune", "race", "export", "dataset", "clone", "benchmark", "analytics"], default="train")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--episodes", type=int, default=10)
     parser.add_argument("--no-render", action="store_true")
@@ -153,6 +153,10 @@ if __name__ == "__main__":
     parser.add_argument("--preset", type=str, default="", help="Config preset: easy, hard, competitive")
     parser.add_argument("--list-experiments", action="store_true")
     parser.add_argument("--dataset-output", default="datasets/trajectories.npz")
+    parser.add_argument("--track-type", type=str, default="", help="Track type: procedural, oval, figure_8, multi_loop")
+    parser.add_argument("--onnx", action="store_true", help="Export to ONNX format")
+    parser.add_argument("--window", type=int, default=50, help="Rolling window for analytics smoothing")
+    parser.add_argument("--dpi", type=int, default=150, help="DPI for analytics figures")
     args = parser.parse_args()
 
     if args.preset:
@@ -167,8 +171,12 @@ if __name__ == "__main__":
         for exp in exps:
             print(f"  {exp['id']}: best={exp['best_reward']}, eps={exp['episodes']}, status={exp['status']}")
     elif args.mode == "train":
+        overrides = preset if args.preset else {}
+        if args.track_type:
+            overrides = dict(overrides)
+            overrides["track_type"] = args.track_type
         train_agent(resume=args.resume,
-                     config_overrides=preset if args.preset else None)
+                     config_overrides=overrides if overrides else None)
     elif args.mode == "evaluate":
         evaluate(num_episodes=args.episodes, render=not args.no_render)
     elif args.mode == "tune":
@@ -176,8 +184,13 @@ if __name__ == "__main__":
     elif args.mode == "race":
         race(render=not args.no_render)
     elif args.mode == "export":
-        from export import export_model
-        export_model(args.checkpoint, args.output, args.state_dim)
+        from export import export_model, export_onnx
+        if args.onnx:
+            if not args.output.endswith(".onnx"):
+                args.output = args.output.rsplit(".", 1)[0] + ".onnx"
+            export_onnx(args.checkpoint, args.output, args.state_dim)
+        else:
+            export_model(args.checkpoint, args.output, args.state_dim)
     elif args.mode == "dataset":
         from generate_dataset import generate_dataset
         generate_dataset(args.episodes, args.dataset_output, args.checkpoint)
@@ -200,4 +213,12 @@ if __name__ == "__main__":
             state_dim=args.state_dim,
             num_episodes=args.episodes,
             output_path=args.output if args.output != "exported/model.pt" else "",
+        )
+    elif args.mode == "analytics":
+        from analytics import generate_analytics
+        generate_analytics(
+            csv_path=args.dataset_output if args.dataset_output != "datasets/trajectories.npz" else "logs/metrics.csv",
+            output_dir=args.output if args.output != "exported/model.pt" else "figures",
+            window=args.window,
+            dpi=args.dpi,
         )
