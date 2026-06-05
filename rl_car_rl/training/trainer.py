@@ -43,6 +43,9 @@ class PPOTrainer:
         ou_sigma: float = 0.0,
         ou_theta: float = 0.15,
         ou_sigma_decay: float = 1.0,
+        hidden_size: int = 256,
+        num_blocks: int = 2,
+        dropout: float = 0.0,
         device: str = "cpu",
     ):
         self.gamma = gamma
@@ -69,6 +72,9 @@ class PPOTrainer:
             ou_sigma=ou_sigma,
             ou_theta=ou_theta,
             ou_sigma_decay=ou_sigma_decay,
+            hidden_size=hidden_size,
+            num_blocks=num_blocks,
+            dropout=dropout,
         )
         self.optimizer = optim.Adam(
             [
@@ -78,7 +84,12 @@ class PPOTrainer:
         )
 
         # Value network
-        self.value_net = DriveNetwork(state_dim, 1).to(self.device)
+        self.value_net = DriveNetwork(
+            state_dim, 1,
+            hidden_size=hidden_size,
+            num_blocks=num_blocks,
+            dropout=dropout,
+        ).to(self.device)
         if self.device.type == "cuda" and torch.cuda.device_count() > 1:
             print(f"Using {torch.cuda.device_count()} GPUs for Value Network!")
             self.value_net = nn.DataParallel(self.value_net)
@@ -274,6 +285,9 @@ class PPOTrainer:
                 "entropy_coef": self.entropy_coef,
                 "entropy_decay": self.entropy_decay,
                 "state_dim": self.state_dim,
+                "hidden_size": self.hidden_size,
+                "num_blocks": self.num_blocks,
+                "dropout": self.dropout,
             },
             path,
         )

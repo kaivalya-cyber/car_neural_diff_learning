@@ -9,11 +9,11 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 
 
-def run_validation_episode(trainer, device, sensor_count):
+def run_validation_episode(trainer, device, sensor_count, obstacle_count=0):
     """Run one deterministic evaluation episode on a single environment."""
     from env.environment import CarEnv
 
-    eval_env = CarEnv(sensor_count=sensor_count)
+    eval_env = CarEnv(sensor_count=sensor_count, obstacle_count=obstacle_count)
     state = eval_env.reset()
     total_reward = 0.0
     steps = 0
@@ -104,6 +104,9 @@ def train_agent(
         ou_sigma=config.get("ou_sigma", 0.0),
         ou_theta=config.get("ou_theta", 0.15),
         ou_sigma_decay=config.get("ou_sigma_decay", 1.0),
+        hidden_size=config.get("hidden_size", 256),
+        num_blocks=config.get("num_blocks", 2),
+        dropout=config.get("dropout", 0.0),
         device=str(device),
     )
 
@@ -198,6 +201,15 @@ def train_agent(
         f"(resuming from episode {episodes_completed})..."
     )
 
+    # Initialize progress bar if tqdm is available
+    try:
+        from tqdm import tqdm
+        pbar = tqdm(total=max_episodes, initial=episodes_completed, desc="Training", unit="ep")
+        use_pbar = True
+    except ImportError:
+        pbar = None
+        use_pbar = False
+
     state = env.reset()
     start_time = time.time()
 
@@ -257,13 +269,22 @@ def train_agent(
                         / max(time.time() - start_time, 0.001)
                     )
                     current_lr = trainer.policy_scheduler.get_last_lr()[0]
-                    print(
-                        f"Ep {episodes_completed} | "
-                        f"Reward: {current_ep_rewards[i]:.2f} | "
-                        f"FPS: {fps} | "
-                        f"LR: {current_lr:.2e} | "
-                        f"Ent: {trainer.entropy_coef:.4f}"
-                    )
+                    
+                    if use_pbar and pbar is not None:
+                        pbar.update(10)
+                        pbar.set_postfix({
+                            "R": f"{current_ep_rewards[i]:.1f}",
+                            "FPS": fps,
+                            "LR": f"{current_lr:.2e}",
+                        })
+                    else:
+                        print(
+                            f"Ep {episodes_completed} | "
+                            f"Reward: {current_ep_rewards[i]:.2f} | "
+                            f"FPS: {fps} | "
+                            f"LR: {current_lr:.2e} | "
+                            f"Ent: {trainer.entropy_coef:.4f}"
+                        )
 
                 # Checkpoint saving
                 if current_ep_rewards[i] > best_reward + early_stop_min_delta:
@@ -310,7 +331,7 @@ def train_agent(
                 ):
                     val_reward, val_steps, val_crashed, val_laps = (
                         run_validation_episode(
-                            trainer, device, eval_sensor_count
+                            trainer, device, eval_sensor_count, obstacle_count
                         )
                     )
                     writer.add_scalar(
@@ -393,7 +414,8 @@ def train_agent(
 
         # Update policy
         if time_step > 0 and time_step % update_timestep == 0:
-            print("Optimizing Policy...")
+            if not use_pbar:
+                print("Optimizing Policy...")
             if len(memory.states) > 0 and state is not None:
                 state_tensor = torch.tensor(
                     state, dtype=torch.float32, device=trainer.device
@@ -410,6 +432,8 @@ def train_agent(
             time_step = 0
 
     trainer.save(is_best=False, checkpoint_dir=checkpoint_dir)
+    if use_pbar and pbar is not None:
+        pbar.close()
     print(
         f"Training Complete. Best reward: {best_reward:.2f}, "
         f"Episodes: {episodes_completed}"

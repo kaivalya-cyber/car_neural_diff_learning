@@ -32,3 +32,7 @@ curriculum_up_rate: 0.05
 curriculum_down_rate: 0.03
 curriculum_threshold_growth: 1.01
 curriculum_window: 10
+curriculum_min_samples: 5
+hidden_size: 256
+num_blocks: 2
+dropout: 0.0

@@ -44,9 +44,17 @@ class RacingPolicy:
         ou_sigma: float = 0.0,
         ou_theta: float = 0.15,
         ou_sigma_decay: float = 1.0,
+        hidden_size: int = 256,
+        num_blocks: int = 2,
+        dropout: float = 0.0,
     ):
         self.device = torch.device(device)
-        self.net = DriveNetwork(state_dim, action_dim).to(self.device)
+        self.net = DriveNetwork(
+            state_dim, action_dim,
+            hidden_size=hidden_size,
+            num_blocks=num_blocks,
+            dropout=dropout,
+        ).to(self.device)
         if self.device.type == "cuda" and torch.cuda.device_count() > 1:
             print(f"Using {torch.cuda.device_count()} GPUs for Policy Network!")
             self.net = torch.nn.DataParallel(self.net)
