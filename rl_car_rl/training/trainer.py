@@ -40,6 +40,7 @@ class PPOTrainer:
         entropy_coef: float = 0.01,
         entropy_decay: float = 1.0,
         normalize_rewards: bool = True,
+        gradient_accumulation_steps: int = 1,
         ou_sigma: float = 0.0,
         ou_theta: float = 0.15,
         ou_sigma_decay: float = 1.0,
@@ -65,6 +66,7 @@ class PPOTrainer:
         self.initial_policy_lr = lr
         self.initial_value_lr = lr
         self.normalize_rewards = normalize_rewards
+        self.gradient_accumulation_steps = max(1, gradient_accumulation_steps)
 
         # Policy network with optional OU noise
         self.policy = RacingPolicy(
@@ -148,6 +150,12 @@ class PPOTrainer:
             np.stack(memory.is_terminals), dtype=torch.float32, device=self.device
         )  # [T, num_envs]
 
+        # Normalize rewards per batch (before GAE)
+        if self.normalize_rewards:
+            r_mean = rewards_tensor.mean()
+            r_std = rewards_tensor.std() + 1e-7
+            rewards_tensor = (rewards_tensor - r_mean) / r_std
+
         # --- Generalized Advantage Estimation (GAE) ---
         advantages = torch.zeros((T, num_envs), dtype=torch.float32, device=self.device)
         gae = torch.zeros(num_envs, dtype=torch.float32, device=self.device)
@@ -175,20 +183,18 @@ class PPOTrainer:
         advantages = advantages.view(-1)
         returns = returns.view(-1)
 
-        # Normalize rewards per batch (before GAE if enabled)
-        if self.normalize_rewards:
-            r_mean = rewards_tensor.mean()
-            r_std = rewards_tensor.std() + 1e-7
-            rewards_tensor = (rewards_tensor - r_mean) / r_std
-
         # Normalize advantages
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-7)
 
         # --- PPO Policy & Value Optimization ---
         total_policy_loss = 0.0
         total_value_loss = 0.0
+        acc_steps = self.gradient_accumulation_steps
 
-        for _ in range(self.K_epochs):
+        self.optimizer.zero_grad()
+        self.value_optimizer.zero_grad()
+
+        for epoch_idx in range(self.K_epochs):
             means = self.policy.net(old_states)
             stds = self.policy.log_std.exp().expand_as(means)
             dist = torch.distributions.Normal(means, stds)
@@ -209,27 +215,30 @@ class PPOTrainer:
             value_loss = 0.5 * self.MseLoss(state_values, returns).mean()
 
             loss = policy_loss + value_loss
-
-            self.optimizer.zero_grad()
-            self.value_optimizer.zero_grad()
+            # Scale loss for gradient accumulation
+            loss = (policy_loss + value_loss) / acc_steps
             loss.backward()
 
-            # Gradient clipping for training stability
-            nn.utils.clip_grad_norm_(self.policy.net.parameters(), self.max_grad_norm)
-            if isinstance(self.value_net, nn.DataParallel):
-                nn.utils.clip_grad_norm_(
-                    self.value_net.module.parameters(), self.max_grad_norm
-                )
-            else:
-                nn.utils.clip_grad_norm_(
-                    self.value_net.parameters(), self.max_grad_norm
-                )
-            # Also clip log_std gradient
-            nn.utils.clip_grad_norm_([self.policy.log_std], self.max_grad_norm)
+            # Step optimizer only after accumulation steps
+            if (epoch_idx + 1) % acc_steps == 0 or epoch_idx == self.K_epochs - 1:
+                # Gradient clipping
+                nn.utils.clip_grad_norm_(self.policy.net.parameters(), self.max_grad_norm)
+                if isinstance(self.value_net, nn.DataParallel):
+                    nn.utils.clip_grad_norm_(
+                        self.value_net.module.parameters(), self.max_grad_norm
+                    )
+                else:
+                    nn.utils.clip_grad_norm_(
+                        self.value_net.parameters(), self.max_grad_norm
+                    )
+                nn.utils.clip_grad_norm_([self.policy.log_std], self.max_grad_norm)
 
-            self.optimizer.step()
-            self.value_optimizer.step()
+                self.optimizer.step()
+                self.value_optimizer.step()
+                self.optimizer.zero_grad()
+                self.value_optimizer.zero_grad()
 
+            # Report unscaled losses for interpretability
             total_policy_loss += policy_loss.item()
             total_value_loss += value_loss.item()
 

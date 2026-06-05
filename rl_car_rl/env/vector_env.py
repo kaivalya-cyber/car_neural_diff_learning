@@ -5,9 +5,9 @@ import os
 
 from env.environment import CarEnv
 
-def worker(remote, parent_remote, sensor_count=16, obstacle_count=0, track_type="procedural"):
+def worker(remote, parent_remote, sensor_count=16, obstacle_count=0, track_type="procedural", action_repeat=1):
     parent_remote.close()
-    env = CarEnv(sensor_count=sensor_count, obstacle_count=obstacle_count, track_type=track_type)
+    env = CarEnv(sensor_count=sensor_count, obstacle_count=obstacle_count, track_type=track_type, action_repeat=action_repeat)
     
     while True:
         cmd, data = remote.recv()
@@ -38,13 +38,13 @@ class VectorEnv:
     Vectorized Environment wrapper that runs multiple environments 
     in parallel using Python's multiprocessing.
     """
-    def __init__(self, num_envs=64, sensor_count=16, obstacle_count=0, track_type="procedural"):
+    def __init__(self, num_envs=64, sensor_count=16, obstacle_count=0, track_type="procedural", action_repeat=1):
         self.num_envs = num_envs
         self.remotes, self.work_remotes = zip(*[mp.Pipe() for _ in range(num_envs)])
         
         self.processes = []
         for work_remote, remote in zip(self.work_remotes, self.remotes):
-            p = mp.Process(target=worker, args=(work_remote, remote, sensor_count, obstacle_count, track_type))
+            p = mp.Process(target=worker, args=(work_remote, remote, sensor_count, obstacle_count, track_type, action_repeat))
             p.daemon = True
             p.start()
             self.processes.append(p)

@@ -76,7 +76,8 @@ def train_agent(
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(seed)
 
-    env = VectorEnv(num_envs=num_envs, sensor_count=sensor_count, obstacle_count=obstacle_count, track_type=track_type)
+    action_repeat = config.get("action_repeat", 1)
+    env = VectorEnv(num_envs=num_envs, sensor_count=sensor_count, obstacle_count=obstacle_count, track_type=track_type, action_repeat=action_repeat)
 
     device = torch.device(
         "cuda"
@@ -103,6 +104,7 @@ def train_agent(
         lr_warmup_epochs=config.get("lr_warmup_epochs", 0),
         lr_warmup_start_factor=config.get("lr_warmup_start_factor", 0.1),
         normalize_rewards=config.get("normalize_rewards", True),
+        gradient_accumulation_steps=config.get("gradient_accumulation_steps", 1),
         ou_sigma=config.get("ou_sigma", 0.0),
         ou_theta=config.get("ou_theta", 0.15),
         ou_sigma_decay=config.get("ou_sigma_decay", 1.0),

@@ -7,7 +7,7 @@ from env.physics import PhysicsEngine
 
 
 class CarEnv:
-    def __init__(self, sensor_count: int = 16, sensor_max_distance: float = 150.0, obstacle_count: int = 0, track_type: str = "procedural"):
+    def __init__(self, sensor_count: int = 16, sensor_max_distance: float = 150.0, obstacle_count: int = 0, track_type: str = "procedural", action_repeat: int = 1):
         self.car = Car()
         self.track = Track()
         self.physics = PhysicsEngine()
@@ -19,6 +19,7 @@ class CarEnv:
         self.sensor_count = sensor_count
         self.obstacle_count = obstacle_count
         self.track_type = track_type
+        self.action_repeat = action_repeat
         self.state_dim = sensor_count + 4
         self.max_steps = 1000
         self.current_step = 0
@@ -76,7 +77,7 @@ class CarEnv:
         self, action: list[float] | np.ndarray
     ) -> tuple[np.ndarray, float, bool, dict]:
         """
-        Execute one environment step.
+        Execute one environment step (with optional action repeat).
 
         Args:
             action: [steering, throttle]
@@ -87,61 +88,64 @@ class CarEnv:
         steering = float(action[0])
         throttle = float(action[1])
 
-        # Physics update
-        self.physics.update(self.car, steering, throttle, self.dt)
-        self.current_step += 1
+        total_reward = 0.0
+        done = False
+        info = {}
+
+        for _ in range(self.action_repeat):
+            if done:
+                break
+
+            # Physics update
+            self.physics.update(self.car, steering, throttle, self.dt)
+            self.current_step += 1
+
+            # Calculate progress
+            current_progress = self.track.get_distance_along_track(
+                self.car.x, self.car.y
+            )
+            progress_diff = current_progress - self.previous_progress
+
+            # Detect lap completion
+            if progress_diff < -0.5:
+                self.lap_count += 1
+                self._crossed_start = True
+                progress_diff += 1.0
+            elif progress_diff > 0.5:
+                self.lap_count = max(0, self.lap_count - 1)
+                self._crossed_start = False
+                progress_diff -= 1.0
+
+            self.previous_progress = current_progress
+
+            corners = self.car.get_corners()
+            boundary_crash = self.track.check_collision(corners)
+            obstacle_crash = self.track.check_obstacle_collision(corners)
+            crashed = boundary_crash or obstacle_crash
+
+            done = crashed or self.current_step >= self.max_steps
+
+            center_distance = self.track.get_center_distance(self.car.x, self.car.y)
+            steering_change = abs(float(steering) - self.previous_steering)
+            self.previous_steering = float(steering)
+
+            from training.reward_function import compute_reward
+            step_reward = compute_reward(
+                self.car.velocity,
+                progress_diff,
+                crashed,
+                done,
+                center_distance=center_distance,
+                steering_change=steering_change,
+            )
+
+            if self._crossed_start and not done:
+                step_reward += 50.0
+                self._crossed_start = False
+
+            total_reward += step_reward
 
         obs = self._get_observation()
-
-        from training.reward_function import compute_reward
-
-        # Calculate progress
-        current_progress = self.track.get_distance_along_track(
-            self.car.x, self.car.y
-        )
-        progress_diff = current_progress - self.previous_progress
-
-        # Detect lap completion: progress wraps from near 1.0 back to near 0.0
-        if progress_diff < -0.5:
-            self.lap_count += 1
-            self._crossed_start = True
-            progress_diff += 1.0
-        elif progress_diff > 0.5:
-            # Going backwards across the finish line
-            self.lap_count = max(0, self.lap_count - 1)
-            self._crossed_start = False
-            progress_diff -= 1.0
-
-        self.previous_progress = current_progress
-
-        # Collision checking (track boundaries + obstacles)
-        corners = self.car.get_corners()
-        boundary_crash = self.track.check_collision(corners)
-        obstacle_crash = self.track.check_obstacle_collision(corners)
-        crashed = boundary_crash or obstacle_crash
-
-        done = crashed or self.current_step >= self.max_steps
-
-        # Compute center distance for reward
-        center_distance = self.track.get_center_distance(self.car.x, self.car.y)
-
-        # Compute steering change for smoothness penalty
-        steering_change = abs(float(steering) - self.previous_steering)
-        self.previous_steering = float(steering)
-
-        reward = compute_reward(
-            self.car.velocity,
-            progress_diff,
-            crashed,
-            done,
-            center_distance=center_distance,
-            steering_change=steering_change,
-        )
-
-        # Lap completion bonus
-        if self._crossed_start and not done:
-            reward += 50.0
-            self._crossed_start = False
 
         info = {
             "x": self.car.x,
@@ -151,11 +155,11 @@ class CarEnv:
             "obstacle_crash": obstacle_crash,
             "center_distance": center_distance,
             "lap_count": self.lap_count,
-            "progress": current_progress,
+            "progress": self.previous_progress,
             "obstacles": len(self.track.obstacles),
         }
 
-        return obs, reward, done, info
+        return obs, total_reward, done, info
 
     def render(self) -> None:
         pass

@@ -16,7 +16,7 @@ from visualization.renderer import Renderer
 from visualization.multi_renderer import MultiCarRenderer
 
 
-def evaluate(num_episodes: int = 10, render: bool = True) -> None:
+def evaluate(num_episodes: int = 10, render: bool = True, record: bool = False, record_path: str = "videos/eval.mp4") -> None:
     config_path = os.path.join("configs", "hyperparameters.yaml")
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
@@ -37,6 +37,10 @@ def evaluate(num_episodes: int = 10, render: bool = True) -> None:
         print("Running with random weights...")
 
     renderer = Renderer(env, fps=60) if render else None
+    recorder = None
+    if record:
+        from video_recorder import VideoRecorder
+        recorder = VideoRecorder(record_path, fps=60)
 
     rewards, steps_list, crashes, laps_list = [], [], [], []
 
@@ -54,8 +58,16 @@ def evaluate(num_episodes: int = 10, render: bool = True) -> None:
 
             if render and renderer:
                 if not renderer.render(reward=reward, done=done):
+                    if recorder:
+                        recorder.close()
                     renderer.close()
                     return
+
+            # Record frame if enabled (capture BEFORE checking done to include terminal state)
+            if recorder and renderer:
+                frame = renderer.get_frame()
+                if frame is not None:
+                    recorder.add_frame(frame)
 
             if done:
                 crashed = info.get("crashed", False)
@@ -70,6 +82,8 @@ def evaluate(num_episodes: int = 10, render: bool = True) -> None:
 
     if renderer:
         renderer.close()
+    if recorder:
+        recorder.close()
 
     rewards, steps_arr, laps_arr = np.array(rewards), np.array(steps_list, dtype=float), np.array(laps_list, dtype=float)
     crash_rate = np.mean(crashes)
@@ -157,6 +171,8 @@ if __name__ == "__main__":
     parser.add_argument("--onnx", action="store_true", help="Export to ONNX format")
     parser.add_argument("--window", type=int, default=50, help="Rolling window for analytics smoothing")
     parser.add_argument("--dpi", type=int, default=150, help="DPI for analytics figures")
+    parser.add_argument("--record", action="store_true", help="Record evaluation as MP4 video")
+    parser.add_argument("--record-path", default="videos/eval.mp4", help="Path for recorded video")
     args = parser.parse_args()
 
     if args.preset:
@@ -178,7 +194,7 @@ if __name__ == "__main__":
         train_agent(resume=args.resume,
                      config_overrides=overrides if overrides else None)
     elif args.mode == "evaluate":
-        evaluate(num_episodes=args.episodes, render=not args.no_render)
+        evaluate(num_episodes=args.episodes, render=not args.no_render, record=args.record, record_path=args.record_path)
     elif args.mode == "tune":
         tune_hyperparameters(budget=args.budget)
     elif args.mode == "race":

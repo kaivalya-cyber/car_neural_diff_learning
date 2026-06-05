@@ -10,6 +10,8 @@ lr_warmup_start_factor: 0.1
 entropy_coef: 0.01
 entropy_decay: 0.9995
 normalize_rewards: true
+gradient_accumulation_steps: 1
+action_repeat: 1
 ou_sigma: 0.0
 ou_theta: 0.15
 ou_sigma_decay: 1.0

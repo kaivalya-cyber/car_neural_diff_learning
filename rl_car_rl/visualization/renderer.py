@@ -117,5 +117,15 @@ class Renderer:
         self.clock.tick(self.fps)
         return True
 
+    def get_frame(self) -> "np.ndarray | None":
+        """Capture the current screen as an RGB numpy array for video recording."""
+        try:
+            import numpy as np
+            data = pygame.surfarray.array3d(self.screen)
+            return np.transpose(data, (1, 0, 2))  # (width, height, 3) -> (height, width, 3)
+        except (ImportError, pygame.error) as e:
+            print(f"Frame capture failed: {e}")
+            return None
+
     def close(self) -> None:
         pygame.quit()
