@@ -142,7 +142,7 @@ def load_preset(name: str) -> dict | None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="RL Car Agent Execution")
-    parser.add_argument("--mode", choices=["train", "evaluate", "tune", "race", "export", "dataset"], default="train")
+    parser.add_argument("--mode", choices=["train", "evaluate", "tune", "race", "export", "dataset", "clone", "benchmark"], default="train")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--episodes", type=int, default=10)
     parser.add_argument("--no-render", action="store_true")
@@ -181,3 +181,23 @@ if __name__ == "__main__":
     elif args.mode == "dataset":
         from generate_dataset import generate_dataset
         generate_dataset(args.episodes, args.dataset_output, args.checkpoint)
+    elif args.mode == "clone":
+        from behavioral_cloning import clone_from_dataset, fine_tune_with_ppo
+        cloned = clone_from_dataset(
+            dataset_path=args.dataset_output,
+            state_dim=args.state_dim,
+            action_dim=2,
+            epochs=args.episodes,
+            output_path=args.output,
+        )
+        if args.resume:
+            fine_tune_with_ppo(cloned, episodes=args.episodes)
+    elif args.mode == "benchmark":
+        from benchmark import run_benchmark, discover_checkpoints
+        checkpoints = [args.checkpoint] if args.checkpoint != "checkpoints/best.pth" else discover_checkpoints()
+        run_benchmark(
+            checkpoints=checkpoints,
+            state_dim=args.state_dim,
+            num_episodes=args.episodes,
+            output_path=args.output if args.output != "exported/model.pt" else "",
+        )

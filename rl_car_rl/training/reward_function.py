@@ -9,37 +9,36 @@ def compute_reward(
     """
     Compute the reward for the agent at each timestep.
 
-    Args:
-        velocity: Current car velocity (m/s).
-        progress_diff: Change in normalized track progress since last step.
-        crashed: Whether the car has collided with a track boundary.
-        done: Whether the episode has terminated.
-        center_distance: Normalized distance from track centerline [0, 1].
-        steering_change: Magnitude of steering change from previous action.
-
-    Returns:
-        Scalar reward value.
+    Rewards progress, speed in the optimal range, centerline position,
+    and penalizes crashes and jerky steering.
     """
     reward = 0.0
 
-    # Forward motion bonus (scaled)
-    reward += 1.0 * velocity * 0.01
-
-    # Track progress reward
+    # Progress reward (primary signal)
     reward += 50.0 * progress_diff
 
-    # Centerline bonus: reward staying near the center of the track
-    # center_distance is [0, 1] where 0 = center, 1 = edge
+    # Speed-zone bonus: reward optimal racing speed (30-40), penalize too slow or too fast
+    optimal_min, optimal_max = 20.0, 40.0
+    if velocity < optimal_min:
+        reward += 0.02 * velocity  # encourage going faster
+    elif velocity > optimal_max:
+        reward -= 0.01 * (velocity - optimal_max)  # penalize excessive speed
+    else:
+        reward += 0.5  # bonus for being in the sweet spot
+
+    # Centerline bonus: reward staying near track center
     reward += 0.5 * (1.0 - center_distance)
 
-    # Smooth steering penalty to discourage jerky driving
+    # Smooth steering penalty
     reward -= 0.05 * steering_change
 
     # Small time penalty to encourage efficiency
     reward -= 0.01
 
-    # Terminal rewards
+    # Crash penalty
     if crashed:
         reward -= 10.0
+
+    # Lap completion handled in environment with separate bonus
 
     return float(reward)
