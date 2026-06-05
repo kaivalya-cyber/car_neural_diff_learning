@@ -1,0 +1,25 @@
+# Easy preset: fast training with forgiving settings
+learning_rate: 0.0003
+gamma: 0.99
+k_epochs: 4
+eps_clip: 0.2
+max_grad_norm: 0.5
+lr_decay: 0.999
+lr_warmup_epochs: 5
+entropy_coef: 0.02
+entropy_decay: 0.999
+max_episodes: 500
+update_timestep: 500
+num_envs: 16
+sensor_count: 8
+obstacle_count: 0
+val_interval: 50
+early_stop_patience: 100
+top_k_checkpoints: 1
+curriculum_start: 0.0
+curriculum_up_threshold: 20.0
+curriculum_down_threshold: 5.0
+curriculum_window: 5
+hidden_size: 128
+num_blocks: 1
+dropout: 0.0

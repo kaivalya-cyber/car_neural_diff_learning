@@ -10,7 +10,6 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from training.training_loop import train_agent
 from training.tuner import tune_hyperparameters
 from training.trainer import PPOTrainer
-from training.experiment_tracker import ExperimentTracker
 from env.environment import CarEnv
 from env.multi_car_env import MultiCarEnv
 from visualization.renderer import Renderer
@@ -18,7 +17,6 @@ from visualization.multi_renderer import MultiCarRenderer
 
 
 def evaluate(num_episodes: int = 10, render: bool = True) -> None:
-    """Run evaluation episodes and report aggregate statistics."""
     config_path = os.path.join("configs", "hyperparameters.yaml")
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
@@ -29,8 +27,7 @@ def evaluate(num_episodes: int = 10, render: bool = True) -> None:
 
     env = CarEnv(sensor_count=sensor_count, obstacle_count=obstacle_count)
     trainer = PPOTrainer(
-        state_dim=state_dim,
-        action_dim=2,
+        state_dim=state_dim, action_dim=2,
         hidden_size=config.get("hidden_size", 256),
         num_blocks=config.get("num_blocks", 2),
         dropout=config.get("dropout", 0.0),
@@ -41,23 +38,16 @@ def evaluate(num_episodes: int = 10, render: bool = True) -> None:
 
     renderer = Renderer(env, fps=60) if render else None
 
-    rewards = []
-    steps_list = []
-    crashes = []
-    laps_list = []
+    rewards, steps_list, crashes, laps_list = [], [], [], []
 
     print(f"Running {num_episodes} evaluation episodes...")
-
     for ep in range(num_episodes):
         state = env.reset()
         trainer.policy.reset_noise()
-        ep_reward = 0.0
-        ep_steps = 0
+        ep_reward, ep_steps = 0.0, 0
 
         while True:
-            final_action, _, _, _ = trainer.policy.get_action(
-                state, deterministic=True
-            )
+            final_action, _, _, _ = trainer.policy.get_action(state, deterministic=True)
             state, reward, done, info = env.step(final_action)
             ep_reward += reward
             ep_steps += 1
@@ -74,34 +64,27 @@ def evaluate(num_episodes: int = 10, render: bool = True) -> None:
                 steps_list.append(ep_steps)
                 crashes.append(crashed)
                 laps_list.append(laps)
-                print(
-                    f"  Ep {ep + 1}/{num_episodes}: "
-                    f"Reward={ep_reward:.1f} Steps={ep_steps} "
-                    f"Crashed={'yes' if crashed else 'no'} Laps={laps}"
-                )
+                print(f"  Ep {ep + 1}/{num_episodes}: Reward={ep_reward:.1f} Steps={ep_steps} Crashed={'yes' if crashed else 'no'} Laps={laps}")
                 time.sleep(0.5)
                 break
 
     if renderer:
         renderer.close()
 
-    rewards = np.array(rewards)
-    steps_list = np.array(steps_list, dtype=float)
-    laps_list = np.array(laps_list, dtype=float)
+    rewards, steps_arr, laps_arr = np.array(rewards), np.array(steps_list, dtype=float), np.array(laps_list, dtype=float)
     crash_rate = np.mean(crashes)
 
     print("\n" + "=" * 50)
     print(f"Evaluation Results ({num_episodes} episodes)")
     print("=" * 50)
     print(f"  Reward:    {rewards.mean():.2f} +- {rewards.std():.2f}  [min={rewards.min():.2f}, max={rewards.max():.2f}, median={np.median(rewards):.2f}]")
-    print(f"  Steps:     {steps_list.mean():.1f} +- {steps_list.std():.1f}")
-    print(f"  Laps:      {laps_list.mean():.1f} +- {laps_list.std():.1f}")
+    print(f"  Steps:     {steps_arr.mean():.1f} +- {steps_arr.std():.1f}")
+    print(f"  Laps:      {laps_arr.mean():.1f} +- {laps_arr.std():.1f}")
     print(f"  Crash Rate: {crash_rate * 100:.1f}%")
     print("=" * 50)
 
 
 def race(render: bool = True) -> None:
-    """Run multi-car racing mode with 2 cars on the same track."""
     config_path = os.path.join("configs", "hyperparameters.yaml")
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
@@ -110,25 +93,13 @@ def race(render: bool = True) -> None:
     obstacle_count = config.get("obstacle_count", 0)
     state_dim = sensor_count + 4
 
-    env = MultiCarEnv(
-        num_cars=2,
-        sensor_count=sensor_count,
-        obstacle_count=obstacle_count,
-    )
+    env = MultiCarEnv(num_cars=2, sensor_count=sensor_count, obstacle_count=obstacle_count)
 
-    # Load two policies (or share one)
-    trainer1 = PPOTrainer(
-        state_dim=state_dim, action_dim=2,
-        hidden_size=config.get("hidden_size", 256),
-    )
-    trainer2 = PPOTrainer(
-        state_dim=state_dim, action_dim=2,
-        hidden_size=config.get("hidden_size", 256),
-    )
+    trainer1 = PPOTrainer(state_dim=state_dim, action_dim=2, hidden_size=config.get("hidden_size", 256))
+    trainer2 = PPOTrainer(state_dim=state_dim, action_dim=2, hidden_size=config.get("hidden_size", 256))
 
     loaded1 = trainer1.load("checkpoints/latest.pth")
     loaded2 = trainer2.load("checkpoints/latest.pth")
-
     if not loaded1:
         print("Car 1: running with random weights...")
     if not loaded2:
@@ -136,7 +107,6 @@ def race(render: bool = True) -> None:
 
     renderer = MultiCarRenderer(env, fps=60) if render else None
     obs = env.reset()
-
     running = True
     print("Starting multi-car race. Close window to exit.")
 
@@ -144,20 +114,13 @@ def race(render: bool = True) -> None:
         action1, _, _, _ = trainer1.policy.get_action(obs[0], deterministic=True)
         action2, _, _, _ = trainer2.policy.get_action(obs[1], deterministic=True)
         actions = np.stack([action1, action2])
-
         obs, rewards, dones, infos = env.step(actions)
-
         if render and renderer:
             running = renderer.render(done=any(dones))
-
         if any(dones):
-            for i, done in enumerate(dones):
-                if done:
-                    print(
-                        f"  {env.cars[i].name}: crashed={infos[i].get('crashed', False)}, "
-                        f"laps={infos[i].get('lap_count', 0)}, "
-                        f"reward={rewards[i]:.1f}"
-                    )
+            for i, d in enumerate(dones):
+                if d:
+                    print(f"  {env.cars[i].name}: crashed={infos[i].get('crashed')}, laps={infos[i].get('lap_count')}, reward={rewards[i]:.1f}")
             obs = env.reset()
             time.sleep(1)
 
@@ -165,13 +128,21 @@ def race(render: bool = True) -> None:
         renderer.close()
 
 
+def load_preset(name: str) -> dict | None:
+    """Load a preset config and return it as overrides dict."""
+    preset_path = os.path.join("configs", "presets", f"{name}.yaml")
+    if os.path.exists(preset_path):
+        with open(preset_path, "r") as f:
+            preset = yaml.safe_load(f)
+        print(f"Loaded preset: {name}")
+        return preset
+    print(f"Preset '{name}' not found. Available: easy, hard, competitive")
+    return None
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="RL Car Agent Execution")
-    parser.add_argument(
-        "--mode",
-        choices=["train", "evaluate", "tune", "race", "export"],
-        default="train",
-    )
+    parser.add_argument("--mode", choices=["train", "evaluate", "tune", "race", "export", "dataset"], default="train")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--episodes", type=int, default=10)
     parser.add_argument("--no-render", action="store_true")
@@ -179,18 +150,25 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoint", default="checkpoints/best.pth")
     parser.add_argument("--output", default="exported/model.pt")
     parser.add_argument("--state-dim", type=int, default=20)
+    parser.add_argument("--preset", type=str, default="", help="Config preset: easy, hard, competitive")
     parser.add_argument("--list-experiments", action="store_true")
+    parser.add_argument("--dataset-output", default="datasets/trajectories.npz")
     args = parser.parse_args()
+
+    if args.preset:
+        preset = load_preset(args.preset)
+        if preset is None:
+            sys.exit(1)
 
     if args.list_experiments:
         from training.experiment_tracker import list_experiments
         exps = list_experiments()
         print(f"Found {len(exps)} experiments:")
         for exp in exps:
-            print(f"  {exp['id']}: best={exp['best_reward']}, "
-                  f"eps={exp['episodes']}, status={exp['status']}")
+            print(f"  {exp['id']}: best={exp['best_reward']}, eps={exp['episodes']}, status={exp['status']}")
     elif args.mode == "train":
-        train_agent(resume=args.resume)
+        train_agent(resume=args.resume,
+                     config_overrides=preset if args.preset else None)
     elif args.mode == "evaluate":
         evaluate(num_episodes=args.episodes, render=not args.no_render)
     elif args.mode == "tune":
@@ -200,3 +178,6 @@ if __name__ == "__main__":
     elif args.mode == "export":
         from export import export_model
         export_model(args.checkpoint, args.output, args.state_dim)
+    elif args.mode == "dataset":
+        from generate_dataset import generate_dataset
+        generate_dataset(args.episodes, args.dataset_output, args.checkpoint)
