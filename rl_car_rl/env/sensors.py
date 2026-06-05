@@ -38,6 +38,7 @@ class SensorSystem:
         Returns normalized distance readings [0, 1] for each sensor.
         1 means no obstacle within max_distance.
         0 means obstacle is touching the sensor.
+        Detects both track boundaries and dynamic obstacles.
         """
         readings = []
         car_x = car.x
@@ -46,6 +47,7 @@ class SensorSystem:
 
         outer_boundary, inner_boundary = track.get_boundaries()
         boundaries = [outer_boundary, inner_boundary]
+        obstacles = track.get_obstacles()
 
         for angle in self.angles:
             ray_heading = heading + angle
@@ -54,7 +56,7 @@ class SensorSystem:
 
             min_dist = self.max_distance
 
-            # Ray endpoint
+            # Check intersection with track boundaries
             p1 = (car_x, car_y)
             p2 = (
                 car_x + ray_dx * self.max_distance,
@@ -74,11 +76,57 @@ class SensorSystem:
 
                     j = i
 
+            # Check intersection with obstacles (circle-ray intersection)
+            for ox, oy, radius in obstacles:
+                dist = self._ray_circle_intersection(
+                    car_x, car_y, ray_dx, ray_dy, ox, oy, radius
+                )
+                if dist is not None and dist < min_dist:
+                    min_dist = dist
+
             # Normalize reading
             normalized_dist = min_dist / self.max_distance
             readings.append(normalized_dist)
 
         return readings
+
+    def _ray_circle_intersection(
+        self,
+        rx: float,
+        ry: float,
+        rdx: float,
+        rdy: float,
+        cx: float,
+        cy: float,
+        radius: float,
+    ) -> float | None:
+        """
+        Ray-circle intersection. Returns distance to nearest intersection
+        point along the ray, or None if no intersection.
+        """
+        # Vector from ray origin to circle center
+        ocx = rx - cx
+        ocy = ry - cy
+
+        # Quadratic: (rdx^2 + rdy^2)*t^2 + 2*(ocx*rdx + ocy*rdy)*t + (ocx^2 + ocy^2 - r^2) = 0
+        a = rdx * rdx + rdy * rdy  # should be 1.0 for normalized direction
+        b = 2.0 * (ocx * rdx + ocy * rdy)
+        c = ocx * ocx + ocy * ocy - radius * radius
+
+        discriminant = b * b - 4.0 * a * c
+        if discriminant < 0:
+            return None
+
+        # Nearest positive t
+        sqrt_d = math.sqrt(discriminant)
+        t1 = (-b - sqrt_d) / (2.0 * a)
+        t2 = (-b + sqrt_d) / (2.0 * a)
+
+        if t1 >= 0:
+            return t1
+        elif t2 >= 0:
+            return t2
+        return None
 
     def _line_intersection_distance(
         self,

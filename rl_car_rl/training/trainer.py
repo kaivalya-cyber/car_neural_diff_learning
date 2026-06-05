@@ -35,6 +35,8 @@ class PPOTrainer:
         eps_clip: float = 0.2,
         max_grad_norm: float = 0.5,
         lr_decay: float = 0.999,
+        lr_warmup_epochs: int = 0,
+        lr_warmup_start_factor: float = 0.1,
         entropy_coef: float = 0.01,
         entropy_decay: float = 1.0,
         device: str = "cpu",
@@ -45,11 +47,16 @@ class PPOTrainer:
         self.K_epochs = K_epochs
         self.max_grad_norm = max_grad_norm
         self.lr_decay = lr_decay
+        self.lr_warmup_epochs = lr_warmup_epochs
+        self.lr_warmup_start_factor = lr_warmup_start_factor
         self.entropy_coef = entropy_coef
         self.entropy_decay = entropy_decay
         self.device = torch.device(device)
         self.state_dim = state_dim
         self.action_dim = action_dim
+        self._update_count = 0  # tracks number of PPO updates for warmup
+        self.initial_policy_lr = lr
+        self.initial_value_lr = lr
 
         # Policy network
         self.policy = RacingPolicy(state_dim, action_dim, device)
@@ -199,23 +206,34 @@ class PPOTrainer:
             total_policy_loss += policy_loss.item()
             total_value_loss += value_loss.item()
 
-        # Step the learning rate schedulers
-        self.policy_scheduler.step()
-        self.value_scheduler.step()
+        # LR warmup: linearly increase LR from start_factor*lr to full lr
+        self._update_count += 1
+        if self._update_count <= self.lr_warmup_epochs:
+            warmup_frac = self._update_count / max(self.lr_warmup_epochs, 1)
+            scale = self.lr_warmup_start_factor + (1.0 - self.lr_warmup_start_factor) * warmup_frac
+            for param_group in self.optimizer.param_groups:
+                param_group["lr"] = self.initial_policy_lr * scale
+            for param_group in self.value_optimizer.param_groups:
+                param_group["lr"] = self.initial_value_lr * scale
+        else:
+            # Step the learning rate schedulers (only after warmup)
+            self.policy_scheduler.step()
+            self.value_scheduler.step()
 
         # Decay entropy coefficient
         self.entropy_coef *= self.entropy_decay
 
         return total_policy_loss / self.K_epochs, total_value_loss / self.K_epochs
 
-    def save(self, is_best: bool = False, checkpoint_dir: str = "checkpoints") -> str:
+    def save(self, is_best: bool = False, checkpoint_dir: str = "checkpoints", episode: int | None = None) -> str:
         """Save model checkpoint. Returns the path saved to."""
         os.makedirs(checkpoint_dir, exist_ok=True)
-        path = (
-            f"{checkpoint_dir}/latest.pth"
-            if not is_best
-            else f"{checkpoint_dir}/best.pth"
-        )
+        if is_best and episode is not None:
+            path = f"{checkpoint_dir}/best_ep{episode}.pth"
+        elif is_best:
+            path = f"{checkpoint_dir}/best.pth"
+        else:
+            path = f"{checkpoint_dir}/latest.pth"
 
         policy_sd = (
             self.policy.net.module.state_dict()

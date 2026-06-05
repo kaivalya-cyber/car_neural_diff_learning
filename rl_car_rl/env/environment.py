@@ -7,7 +7,7 @@ from env.physics import PhysicsEngine
 
 
 class CarEnv:
-    def __init__(self, sensor_count: int = 16, sensor_max_distance: float = 150.0):
+    def __init__(self, sensor_count: int = 16, sensor_max_distance: float = 150.0, obstacle_count: int = 0):
         self.car = Car()
         self.track = Track()
         self.physics = PhysicsEngine()
@@ -17,7 +17,8 @@ class CarEnv:
             spread_degrees=360.0,
         )
         self.sensor_count = sensor_count
-        self.state_dim = sensor_count + 4  # sensors + velocity, heading, ang_vel, center_dist
+        self.obstacle_count = obstacle_count
+        self.state_dim = sensor_count + 4
         self.max_steps = 1000
         self.current_step = 0
         self.dt = 0.1
@@ -31,7 +32,7 @@ class CarEnv:
         self.track_params = params
 
     def reset(self) -> np.ndarray:
-        self.track.generate(**self.track_params)
+        self.track.generate(obstacle_count=self.obstacle_count, **self.track_params)
         start = self.track.start_pose
         self.car.reset(start["x"], start["y"], start["heading"])
         self.current_step = 0
@@ -112,9 +113,11 @@ class CarEnv:
 
         self.previous_progress = current_progress
 
-        # Collision checking
+        # Collision checking (track boundaries + obstacles)
         corners = self.car.get_corners()
-        crashed = self.track.check_collision(corners)
+        boundary_crash = self.track.check_collision(corners)
+        obstacle_crash = self.track.check_obstacle_collision(corners)
+        crashed = boundary_crash or obstacle_crash
 
         done = crashed or self.current_step >= self.max_steps
 
@@ -144,9 +147,11 @@ class CarEnv:
             "y": self.car.y,
             "velocity": self.car.velocity,
             "crashed": crashed,
+            "obstacle_crash": obstacle_crash,
             "center_distance": center_distance,
             "lap_count": self.lap_count,
             "progress": current_progress,
+            "obstacles": len(self.track.obstacles),
         }
 
         return obs, reward, done, info

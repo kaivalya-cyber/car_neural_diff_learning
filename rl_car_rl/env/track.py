@@ -12,8 +12,9 @@ class Track:
         self.outer_boundary = []
         self.inner_boundary = []
         self.start_pose = {"x": 0.0, "y": 0.0, "heading": 0.0}
+        self.obstacles = []  # list of (x, y, radius) tuples
         
-    def generate(self, track_width=80.0, num_control_points=12, max_radius=400, min_radius=150):
+    def generate(self, track_width=80.0, num_control_points=12, max_radius=400, min_radius=150, obstacle_count=0, obstacle_radius=15.0):
         """Generates a procedural closed-loop track using random angles and radii."""
         self.track_width = track_width
         
@@ -39,6 +40,9 @@ class Track:
         
         # Pick random starting position
         self._pick_start_pose()
+        
+        # Generate obstacles if requested
+        self.obstacles = self._generate_obstacles(obstacle_count, obstacle_radius)
 
     def _compute_catmull_rom_spline(self, control_points, points_per_segment=10):
         """Interpolates control points using a Catmull-Rom spline for a closed loop."""
@@ -198,3 +202,77 @@ class Track:
         half_width = self.track_width / 2.0
         normalized = min(dist_to_center / half_width, 1.0)
         return normalized
+
+    def _generate_obstacles(self, count: int, radius: float) -> list[tuple[float, float, float]]:
+        """
+        Generate random circular obstacles placed on the track surface.
+        Obstacles are placed at random positions along the centerline with
+        a random offset within the track bounds.
+        """
+        if count <= 0 or not self.center_points:
+            return []
+
+        obstacles = []
+        n_center = len(self.center_points)
+        half_width = self.track_width / 2.0
+        attempts = 0
+        max_attempts = count * 20
+
+        min_spacing = radius * 4  # minimum distance between obstacle centers
+
+        while len(obstacles) < count and attempts < max_attempts:
+            attempts += 1
+
+            # Pick a random point on the centerline
+            idx = np.random.randint(0, n_center)
+            cx, cy = self.center_points[idx]
+
+            # Random offset perpendicular to track direction
+            next_idx = (idx + 1) % n_center
+            px, py = self.center_points[next_idx]
+            dx = px - cx
+            dy = py - cy
+            track_dir_len = math.hypot(dx, dy)
+            if track_dir_len < 1e-6:
+                continue
+            # Normal perpendicular
+            nx = -dy / track_dir_len
+            ny = dx / track_dir_len
+
+            # Random offset within track bounds
+            offset = np.random.uniform(-half_width * 0.7, half_width * 0.7)
+            ox = cx + nx * offset
+            oy = cy + ny * offset
+
+            # Check this obstacle doesn't overlap with existing ones
+            too_close = False
+            for ex, ey, er in obstacles:
+                if math.hypot(ox - ex, oy - ey) < (radius + er + min_spacing):
+                    too_close = True
+                    break
+
+            # Check it's not too close to the start position
+            sx, sy = self.start_pose["x"], self.start_pose["y"]
+            if math.hypot(ox - sx, oy - sy) < radius * 10:
+                too_close = True
+
+            if not too_close:
+                obstacles.append((ox, oy, radius))
+
+        return obstacles
+
+    def get_obstacles(self) -> list[tuple[float, float, float]]:
+        """Return list of obstacles as (x, y, radius) tuples."""
+        return self.obstacles
+
+    def check_obstacle_collision(self, car_corners: list[tuple[float, float]]) -> bool:
+        """
+        Check if any car corner collides with any obstacle.
+        Returns True if collision detected.
+        """
+        for ox, oy, radius in self.obstacles:
+            for corner in car_corners:
+                cx, cy = corner
+                if math.hypot(cx - ox, cy - oy) < radius:
+                    return True
+        return False

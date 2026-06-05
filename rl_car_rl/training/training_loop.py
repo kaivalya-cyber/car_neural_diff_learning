@@ -62,6 +62,7 @@ def train_agent(
 
     num_envs = config.get("num_envs", 64)
     sensor_count = config.get("sensor_count", 16)
+    obstacle_count = config.get("obstacle_count", 0)
     state_dim = sensor_count + 4  # sensors + velocity, heading, angular_vel, center_dist
 
     if seed is not None:
@@ -73,7 +74,7 @@ def train_agent(
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(seed)
 
-    env = VectorEnv(num_envs=num_envs, sensor_count=sensor_count)
+    env = VectorEnv(num_envs=num_envs, sensor_count=sensor_count, obstacle_count=obstacle_count)
 
     device = torch.device(
         "cuda"
@@ -97,6 +98,8 @@ def train_agent(
         lr_decay=config.get("lr_decay", 0.999),
         entropy_coef=config.get("entropy_coef", 0.01),
         entropy_decay=config.get("entropy_decay", 1.0),
+        lr_warmup_epochs=config.get("lr_warmup_epochs", 0),
+        lr_warmup_start_factor=config.get("lr_warmup_start_factor", 0.1),
         device=str(device),
     )
 
@@ -158,6 +161,10 @@ def train_agent(
     early_stop_patience = config.get("early_stop_patience", 200)
     early_stop_min_delta = config.get("early_stop_min_delta", 0.5)
     last_improvement_episode = start_episode
+
+    # --- Top-K checkpoint management ---
+    top_k = config.get("top_k_checkpoints", 1)
+    top_k_rewards = []  # list of (reward, episode) tuples
 
     # --- Periodic validation ---
     val_interval = config.get("val_interval", 50)
@@ -247,7 +254,32 @@ def train_agent(
                 if current_ep_rewards[i] > best_reward + early_stop_min_delta:
                     best_reward = current_ep_rewards[i]
                     last_improvement_episode = episodes_completed
-                    trainer.save(is_best=True, checkpoint_dir=checkpoint_dir)
+                    
+                    # Top-K management: save with episode prefix
+                    if top_k > 0:
+                        trainer.save(
+                            is_best=True, checkpoint_dir=checkpoint_dir,
+                            episode=episodes_completed
+                        )
+                        top_k_rewards.append((current_ep_rewards[i], episodes_completed))
+                        top_k_rewards.sort(key=lambda x: x[0], reverse=True)
+                        top_k_rewards = top_k_rewards[:top_k]
+                        # Clean up old checkpoints
+                        existing = [
+                            f for f in os.listdir(checkpoint_dir)
+                            if f.startswith("best_ep") and f.endswith(".pth")
+                        ]
+                        keep_eps = {ep for _, ep in top_k_rewards}
+                        for fname in existing:
+                            try:
+                                ep = int(fname.replace("best_ep", "").replace(".pth", ""))
+                                if ep not in keep_eps:
+                                    os.remove(os.path.join(checkpoint_dir, fname))
+                            except ValueError:
+                                pass
+                    else:
+                        trainer.save(is_best=True, checkpoint_dir=checkpoint_dir)
+                    
                     print(
                         f"Saved new best model @ Reward {best_reward:.2f} "
                         f"(ep {episodes_completed})"
