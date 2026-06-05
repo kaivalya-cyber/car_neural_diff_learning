@@ -153,6 +153,47 @@ def export_model(
     return output_path
 
 
+def export_quantized(
+    checkpoint_path: str,
+    output_path: str,
+    state_dim: int = 20
+) -> str:
+    """Export a trained policy with int8 dynamic quantization for edge deployment."""
+    model, action_dim, hidden_size = _load_checkpoint_and_build_model(
+        checkpoint_path, state_dim
+    )
+
+    # Dynamic quantization: quantize Linear layers to int8
+    model.eval()
+    quantized_net = torch.ao.quantization.quantize_dynamic(
+        model.net,
+        {torch.nn.Linear},
+        dtype=torch.qint8,
+    )
+    model.net = quantized_net
+
+    # Trace with example input for TorchScript (quantized models can be traced)
+    example_input = torch.randn(1, state_dim)
+    with torch.no_grad():
+        traced = torch.jit.trace(model, example_input)
+
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    traced.save(output_path)
+
+    file_size_kb = os.path.getsize(output_path) / 1024
+    print(f"Quantized model exported to {output_path}")
+    print(f"  State dim: {state_dim}, Action dim: {action_dim}, Hidden size: {hidden_size}")
+    print(f"  File size: {file_size_kb:.1f} KB (int8 quantized)")
+
+    # Verify
+    loaded = torch.jit.load(output_path)
+    with torch.no_grad():
+        test_out = loaded(example_input)
+    print(f"  Verified: output shapes = {[o.shape for o in test_out]}")
+
+    return output_path
+
+
 def export_onnx(
     checkpoint_path: str,
     output_path: str,
@@ -233,10 +274,18 @@ if __name__ == "__main__":
         action="store_true",
         help="Export to ONNX format instead of TorchScript",
     )
+    parser.add_argument(
+        "--quantize",
+        action="store_true",
+        help="Apply int8 dynamic quantization for edge deployment",
+    )
     args = parser.parse_args()
 
-    if args.onnx:
-        # Auto-fix extension if needed
+    if args.quantize:
+        if not args.output.endswith(".pt"):
+            args.output = args.output.rsplit(".", 1)[0] + "_q.pt"
+        export_quantized(args.checkpoint, args.output, args.state_dim)
+    elif args.onnx:
         if not args.output.endswith(".onnx"):
             args.output = args.output.rsplit(".", 1)[0] + ".onnx"
         export_onnx(args.checkpoint, args.output, args.state_dim)

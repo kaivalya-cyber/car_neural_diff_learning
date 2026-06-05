@@ -77,7 +77,8 @@ def train_agent(
             torch.cuda.manual_seed_all(seed)
 
     action_repeat = config.get("action_repeat", 1)
-    env = VectorEnv(num_envs=num_envs, sensor_count=sensor_count, obstacle_count=obstacle_count, track_type=track_type, action_repeat=action_repeat)
+    sensor_front_density = config.get("sensor_front_density", 1.0)
+    env = VectorEnv(num_envs=num_envs, sensor_count=sensor_count, obstacle_count=obstacle_count, track_type=track_type, action_repeat=action_repeat, sensor_front_density=sensor_front_density)
 
     device = torch.device(
         "cuda"

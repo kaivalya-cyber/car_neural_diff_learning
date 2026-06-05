@@ -10,6 +10,7 @@ class SensorSystem:
         sensor_count: int = 16,
         max_distance: float = 150.0,
         spread_degrees: float = 360.0,
+        front_density: float = 1.0,
     ):
         """
         LiDAR-style raycast sensor system.
@@ -19,19 +20,35 @@ class SensorSystem:
             max_distance: Maximum detection distance in world units.
             spread_degrees: Angular spread of the sensor array in degrees.
                 360 = full circle (LiDAR), 180 = front-facing only.
+            front_density: Concentration of sensors toward the front.
+                1.0 = uniform spacing, 2.0 = 2x denser in front, 0.5 = denser in sides.
         """
         self.sensor_count = sensor_count
         self.max_distance = max_distance
         self.spread_degrees = spread_degrees
+        self.front_density = front_density
 
-        # Generate evenly spaced ray angles in radians
+        # Generate ray angles with configurable front bias
         spread_rad = math.radians(spread_degrees)
         if sensor_count == 1:
             self.angles = [0.0]
         else:
-            self.angles = np.linspace(
-                -spread_rad / 2, spread_rad / 2, sensor_count
-            ).tolist()
+            if abs(front_density - 1.0) < 1e-6:
+                # Uniform spacing (fast path)
+                self.angles = np.linspace(
+                    -spread_rad / 2, spread_rad / 2, sensor_count
+                ).tolist()
+            else:
+                # Non-uniform: map through a transformation that concentrates
+                # angles near the front (angle=0)
+                uniform = np.linspace(0, 1, sensor_count)
+                # Apply power transform: values near 0.5 (center) get closer to 0.5
+                # when front_density > 1, making front angles denser
+                centered = (uniform - 0.5) * 2.0  # [-1, 1]
+                mapped = np.sign(centered) * np.abs(centered) ** (1.0 / front_density)
+                mapped = (mapped / 2.0 + 0.5)  # back to [0, 1]
+                self.angles = (mapped - 0.5) * spread_rad
+                self.angles = self.angles.tolist()
 
     def get_readings(self, car: Car, track: Track) -> list[float]:
         """

@@ -156,7 +156,7 @@ def load_preset(name: str) -> dict | None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="RL Car Agent Execution")
-    parser.add_argument("--mode", choices=["train", "evaluate", "tune", "race", "export", "dataset", "clone", "benchmark", "analytics", "smoke-test", "self-play"], default="train")
+    parser.add_argument("--mode", choices=["train", "evaluate", "tune", "race", "export", "dataset", "clone", "benchmark", "analytics", "smoke-test", "self-play", "compare-tracks", "dashboard"], default="train")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--episodes", type=int, default=10)
     parser.add_argument("--no-render", action="store_true")
@@ -173,6 +173,8 @@ if __name__ == "__main__":
     parser.add_argument("--dpi", type=int, default=150, help="DPI for analytics figures")
     parser.add_argument("--record", action="store_true", help="Record evaluation as MP4 video")
     parser.add_argument("--record-path", default="videos/eval.mp4", help="Path for recorded video")
+    parser.add_argument("--quantize", action="store_true", help="Export with int8 quantization")
+    parser.add_argument("--port", type=int, default=8080, help="Dashboard server port")
     args = parser.parse_args()
 
     if args.preset:
@@ -200,8 +202,10 @@ if __name__ == "__main__":
     elif args.mode == "race":
         race(render=not args.no_render)
     elif args.mode == "export":
-        from export import export_model, export_onnx
-        if args.onnx:
+        from export import export_model, export_onnx, export_quantized
+        if args.quantize:
+            export_quantized(args.checkpoint, args.output, args.state_dim)
+        elif args.onnx:
             if not args.output.endswith(".onnx"):
                 args.output = args.output.rsplit(".", 1)[0] + ".onnx"
             export_onnx(args.checkpoint, args.output, args.state_dim)
@@ -260,3 +264,47 @@ if __name__ == "__main__":
             overrides = dict(overrides)
             overrides["track_type"] = args.track_type
         train_self_play(config_overrides=overrides if overrides else None)
+    elif args.mode == "compare-tracks":
+        config_path = os.path.join("configs", "hyperparameters.yaml")
+        with open(config_path, "r") as f:
+            config = yaml.safe_load(f)
+        if args.preset:
+            config.update(preset)
+        sensor_count = config.get("sensor_count", 16)
+        obstacle_count = config.get("obstacle_count", 0)
+        state_dim = sensor_count + 4
+        track_types = ["procedural", "oval", "figure_8", "multi_loop"]
+        print(f"\n{'='*70}")
+        print(f"Track Comparison Benchmark ({args.episodes} episodes each)")
+        print(f"{'='*70}")
+        for tt in track_types:
+            env = CarEnv(sensor_count=sensor_count, obstacle_count=obstacle_count, track_type=tt)
+            trainer = PPOTrainer(state_dim=state_dim, action_dim=2,
+                                hidden_size=config.get("hidden_size", 256),
+                                num_blocks=config.get("num_blocks", 2))
+            loaded = trainer.load(args.checkpoint)
+            if not loaded:
+                print(f"  {tt:15s}  SKIPPED (checkpoint not found)")
+                continue
+            rewards = []
+            for _ in range(args.episodes):
+                state = env.reset()
+                ep_r = 0.0
+                while True:
+                    action, _, _, _ = trainer.policy.get_action(state, deterministic=True)
+                    state, r, done, _ = env.step(action)
+                    ep_r += r
+                    if done:
+                        break
+                rewards.append(ep_r)
+            rewards = np.array(rewards)
+            print(f"  {tt:15s}  mean={rewards.mean():.1f}  std={rewards.std():.1f}  "
+                  f"min={rewards.min():.1f}  max={rewards.max():.1f}")
+        print(f"{'='*70}\n")
+    elif args.mode == "dashboard":
+        from dashboard_server import create_app as create_dash
+        csv_path = args.dataset_output if args.dataset_output != "datasets/trajectories.npz" else "logs/metrics.csv"
+        app = create_dash(csv_path, port=args.port)
+        if app:
+            print(f"Dashboard server starting at http://0.0.0.0:{args.port}")
+            app.run(host="0.0.0.0", port=args.port, debug=False)

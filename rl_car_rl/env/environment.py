@@ -7,7 +7,7 @@ from env.physics import PhysicsEngine
 
 
 class CarEnv:
-    def __init__(self, sensor_count: int = 16, sensor_max_distance: float = 150.0, obstacle_count: int = 0, track_type: str = "procedural", action_repeat: int = 1):
+    def __init__(self, sensor_count: int = 16, sensor_max_distance: float = 150.0, obstacle_count: int = 0, track_type: str = "procedural", action_repeat: int = 1, sensor_front_density: float = 1.0):
         self.car = Car()
         self.track = Track()
         self.physics = PhysicsEngine()
@@ -15,6 +15,7 @@ class CarEnv:
             sensor_count=sensor_count,
             max_distance=sensor_max_distance,
             spread_degrees=360.0,
+            front_density=sensor_front_density,
         )
         self.sensor_count = sensor_count
         self.obstacle_count = obstacle_count
