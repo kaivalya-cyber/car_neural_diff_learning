@@ -3,19 +3,37 @@ import numpy as np
 from env.car import Car
 from env.track import Track
 
+
 class SensorSystem:
-    def __init__(self, num_sensors=5, max_distance=150.0):
-        self.num_sensors = num_sensors
+    def __init__(
+        self,
+        sensor_count: int = 16,
+        max_distance: float = 150.0,
+        spread_degrees: float = 360.0,
+    ):
+        """
+        LiDAR-style raycast sensor system.
+
+        Args:
+            sensor_count: Number of rays to cast.
+            max_distance: Maximum detection distance in world units.
+            spread_degrees: Angular spread of the sensor array in degrees.
+                360 = full circle (LiDAR), 180 = front-facing only.
+        """
+        self.sensor_count = sensor_count
         self.max_distance = max_distance
-        
-        # Ray angles relative to car heading: e.g., -90, -45, 0, 45, 90 for 5 sensors
-        if num_sensors == 1:
+        self.spread_degrees = spread_degrees
+
+        # Generate evenly spaced ray angles in radians
+        spread_rad = math.radians(spread_degrees)
+        if sensor_count == 1:
             self.angles = [0.0]
         else:
-            spread = math.pi  # 180 degrees spread
-            self.angles = np.linspace(-spread/2, spread/2, num_sensors).tolist()
+            self.angles = np.linspace(
+                -spread_rad / 2, spread_rad / 2, sensor_count
+            ).tolist()
 
-    def get_readings(self, car: Car, track: Track):
+    def get_readings(self, car: Car, track: Track) -> list[float]:
         """
         Returns normalized distance readings [0, 1] for each sensor.
         1 means no obstacle within max_distance.
@@ -25,7 +43,7 @@ class SensorSystem:
         car_x = car.x
         car_y = car.y
         heading = car.heading
-        
+
         outer_boundary, inner_boundary = track.get_boundaries()
         boundaries = [outer_boundary, inner_boundary]
 
@@ -33,37 +51,45 @@ class SensorSystem:
             ray_heading = heading + angle
             ray_dx = math.cos(ray_heading)
             ray_dy = math.sin(ray_heading)
-            
-            # Simple raycasting using step-wise sampling (can be optimized with line intersection)
+
             min_dist = self.max_distance
-            
-            # More precise line intersection
+
+            # Ray endpoint
             p1 = (car_x, car_y)
-            p2 = (car_x + ray_dx * self.max_distance, car_y + ray_dy * self.max_distance)
-            
+            p2 = (
+                car_x + ray_dx * self.max_distance,
+                car_y + ray_dy * self.max_distance,
+            )
+
             for boundary in boundaries:
                 n = len(boundary)
                 j = n - 1
                 for i in range(n):
                     p3 = boundary[j]
                     p4 = boundary[i]
-                    
+
                     dist = self._line_intersection_distance(p1, p2, p3, p4)
                     if dist is not None and dist < min_dist:
                         min_dist = dist
-                    
+
                     j = i
-            
+
             # Normalize reading
             normalized_dist = min_dist / self.max_distance
             readings.append(normalized_dist)
-            
+
         return readings
 
-    def _line_intersection_distance(self, p1, p2, p3, p4):
+    def _line_intersection_distance(
+        self,
+        p1: tuple[float, float],
+        p2: tuple[float, float],
+        p3: tuple[float, float],
+        p4: tuple[float, float],
+    ) -> float | None:
         """
-        Returns the distance from p1 to the intersection point of line segments p1-p2 and p3-p4.
-        Returns None if no intersection.
+        Returns the distance from p1 to the intersection point of
+        line segments p1-p2 and p3-p4. Returns None if no intersection.
         """
         x1, y1 = p1
         x2, y2 = p2
@@ -82,5 +108,5 @@ class SensorSystem:
             iy = y1 + t * (y2 - y1)
             dist = math.hypot(ix - x1, iy - y1)
             return dist
-        
+
         return None

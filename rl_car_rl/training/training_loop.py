@@ -9,6 +9,33 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 
 
+def run_validation_episode(trainer, device, sensor_count):
+    """Run one deterministic evaluation episode on a single environment."""
+    from env.environment import CarEnv
+
+    eval_env = CarEnv(sensor_count=sensor_count)
+    state = eval_env.reset()
+    total_reward = 0.0
+    steps = 0
+    crashed = False
+    laps = 0
+
+    while True:
+        state_tensor = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+        final_action, _, _, _ = trainer.policy.get_action(
+            state_tensor.cpu().numpy().squeeze(0), deterministic=True
+        )
+        state, reward, done, info = eval_env.step(final_action)
+        total_reward += reward
+        steps += 1
+        laps = info.get("lap_count", 0)
+        if done:
+            crashed = info.get("crashed", False)
+            break
+
+    return total_reward, steps, crashed, laps
+
+
 def train_agent(
     config_overrides=None,
     output_dir=None,
@@ -34,15 +61,19 @@ def train_agent(
         config.update(config_overrides)
 
     num_envs = config.get("num_envs", 64)
+    sensor_count = config.get("sensor_count", 16)
+    state_dim = sensor_count + 4  # sensors + velocity, heading, angular_vel, center_dist
+
     if seed is not None:
         import random
+
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(seed)
 
-    env = VectorEnv(num_envs=num_envs)
+    env = VectorEnv(num_envs=num_envs, sensor_count=sensor_count)
 
     device = torch.device(
         "cuda"
@@ -52,9 +83,10 @@ def train_agent(
         else "cpu"
     )
     print(f"Training on device: {device}")
+    print(f"State dim: {state_dim} ({sensor_count} sensors + 4 car features)")
 
     trainer = PPOTrainer(
-        state_dim=9,
+        state_dim=state_dim,
         action_dim=2,
         lr=config["learning_rate"],
         gamma=config["gamma"],
@@ -63,6 +95,8 @@ def train_agent(
         eps_clip=config["eps_clip"],
         max_grad_norm=config.get("max_grad_norm", 0.5),
         lr_decay=config.get("lr_decay", 0.999),
+        entropy_coef=config.get("entropy_coef", 0.01),
+        entropy_decay=config.get("entropy_decay", 1.0),
         device=str(device),
     )
 
@@ -87,12 +121,11 @@ def train_agent(
     os.makedirs(logs_dir, exist_ok=True)
     writer = SummaryWriter(log_dir=os.path.join(logs_dir, "train"))
 
-    # Determine CSV write mode (append if resuming, write header if fresh)
+    # Determine CSV write mode
     csv_path = os.path.join(logs_dir, "metrics.csv")
     csv_exists = os.path.exists(csv_path) and os.path.getsize(csv_path) > 0
 
     if resume and csv_exists:
-        # Read last episode from CSV to continue numbering
         try:
             with open(csv_path, "r") as f:
                 lines = f.readlines()
@@ -100,8 +133,8 @@ def train_agent(
                 last_line = lines[-1].strip()
                 if last_line:
                     start_episode = int(last_line.split(",")[0])
-            # Find best reward from CSV
             import pandas as pd
+
             df = pd.read_csv(csv_path)
             if not df.empty:
                 best_reward = float(df["reward"].max())
@@ -109,11 +142,12 @@ def train_agent(
             start_episode = 0
     else:
         with open(csv_path, "w") as f:
-            f.write("episode,reward,length,crash_rate,difficulty,center_distance\n")
+            f.write(
+                "episode,reward,length,crash_rate,difficulty,center_distance,laps\n"
+            )
 
     curriculum = CurriculumManager()
 
-    # Init env with start difficulty
     if use_curriculum:
         env.set_difficulty(curriculum.get_generation_params())
 
@@ -125,10 +159,13 @@ def train_agent(
     early_stop_min_delta = config.get("early_stop_min_delta", 0.5)
     last_improvement_episode = start_episode
 
+    # --- Periodic validation ---
+    val_interval = config.get("val_interval", 50)
+    eval_sensor_count = sensor_count  # must match for checkpoint compatibility
+
     time_step = 0
     global_step = 0
 
-    # We track episodes by env
     current_ep_rewards = np.zeros(num_envs)
     current_ep_lengths = np.zeros(num_envs)
     episodes_completed = start_episode
@@ -151,7 +188,6 @@ def train_agent(
         )
         next_state, reward, done, info = env.step(final_action)
 
-        # Store transition
         memory.states.append(state)
         memory.actions.append(raw_action.detach().cpu().numpy())
         memory.logprobs.append(log_prob.detach().cpu().numpy())
@@ -167,7 +203,6 @@ def train_agent(
                 episodes_completed += 1
                 recent_rewards.append(current_ep_rewards[i])
 
-                # Log metrics
                 writer.add_scalar(
                     "Reward/Episode", current_ep_rewards[i], episodes_completed
                 )
@@ -182,35 +217,37 @@ def train_agent(
                 writer.add_scalar(
                     "Metrics/CenterDistance", center_dist, episodes_completed
                 )
+                laps_done = info[i].get("lap_count", 0)
+                writer.add_scalar(
+                    "Metrics/Laps", laps_done, episodes_completed
+                )
 
-                # Append to CSV
                 with open(csv_path, "a") as f:
                     f.write(
                         f"{episodes_completed},{current_ep_rewards[i]:.4f},"
                         f"{current_ep_lengths[i]},{crash_rate},"
-                        f"{curriculum.level:.4f},{center_dist:.4f}\n"
+                        f"{curriculum.level:.4f},{center_dist:.4f},{laps_done}\n"
                     )
 
-                # Terminal print
                 if episodes_completed % 10 == 0:
                     fps = int(
-                        (time_step * num_envs) / max(time.time() - start_time, 0.001)
+                        (time_step * num_envs)
+                        / max(time.time() - start_time, 0.001)
                     )
                     current_lr = trainer.policy_scheduler.get_last_lr()[0]
                     print(
                         f"Ep {episodes_completed} | "
                         f"Reward: {current_ep_rewards[i]:.2f} | "
                         f"FPS: {fps} | "
-                        f"LR: {current_lr:.2e}"
+                        f"LR: {current_lr:.2e} | "
+                        f"Ent: {trainer.entropy_coef:.4f}"
                     )
 
                 # Checkpoint saving
                 if current_ep_rewards[i] > best_reward + early_stop_min_delta:
                     best_reward = current_ep_rewards[i]
                     last_improvement_episode = episodes_completed
-                    trainer.save(
-                        is_best=True, checkpoint_dir=checkpoint_dir
-                    )
+                    trainer.save(is_best=True, checkpoint_dir=checkpoint_dir)
                     print(
                         f"Saved new best model @ Reward {best_reward:.2f} "
                         f"(ep {episodes_completed})"
@@ -219,6 +256,36 @@ def train_agent(
                 if episodes_completed % 50 == 0:
                     trainer.save(is_best=False, checkpoint_dir=checkpoint_dir)
 
+                # --- Periodic validation ---
+                if (
+                    val_interval > 0
+                    and episodes_completed % val_interval == 0
+                ):
+                    val_reward, val_steps, val_crashed, val_laps = (
+                        run_validation_episode(
+                            trainer, device, eval_sensor_count
+                        )
+                    )
+                    writer.add_scalar(
+                        "Validation/Reward", val_reward, episodes_completed
+                    )
+                    writer.add_scalar(
+                        "Validation/Steps", val_steps, episodes_completed
+                    )
+                    writer.add_scalar(
+                        "Validation/Crashed", float(val_crashed), episodes_completed
+                    )
+                    writer.add_scalar(
+                        "Validation/Laps", val_laps, episodes_completed
+                    )
+                    print(
+                        f"  Validation Ep {episodes_completed} | "
+                        f"Reward: {val_reward:.2f} | "
+                        f"Steps: {val_steps} | "
+                        f"Crashed: {val_crashed} | "
+                        f"Laps: {val_laps}"
+                    )
+
                 # Reset tracking for this env
                 current_ep_rewards[i] = 0
                 current_ep_lengths[i] = 0
@@ -226,7 +293,7 @@ def train_agent(
                 if episodes_completed >= max_episodes:
                     break
 
-        # Early stopping check (per-episode, not per-environment)
+        # Early stopping check
         if episodes_completed - last_improvement_episode >= early_stop_patience:
             print(
                 f"Early stopping triggered after {early_stop_patience} "
@@ -236,7 +303,11 @@ def train_agent(
             break
 
         # Periodic Curriculum Update
-        if use_curriculum and global_step > 0 and global_step % (update_timestep * 2) == 0:
+        if (
+            use_curriculum
+            and global_step > 0
+            and global_step % (update_timestep * 2) == 0
+        ):
             if len(recent_rewards) > 0:
                 mean_reward = np.mean(recent_rewards)
                 old_level = curriculum.level
@@ -258,9 +329,10 @@ def train_agent(
         # Update policy
         if time_step > 0 and time_step % update_timestep == 0:
             print("Optimizing Policy...")
-            # Compute final state value for GAE bootstrapping
             if len(memory.states) > 0 and state is not None:
-                state_tensor = torch.tensor(state, dtype=torch.float32, device=trainer.device)
+                state_tensor = torch.tensor(
+                    state, dtype=torch.float32, device=trainer.device
+                )
                 with torch.no_grad():
                     final_value = trainer.value_net(state_tensor).squeeze(-1)
             else:
@@ -272,7 +344,6 @@ def train_agent(
             memory.clear_memory()
             time_step = 0
 
-    # Final save
     trainer.save(is_best=False, checkpoint_dir=checkpoint_dir)
     print(
         f"Training Complete. Best reward: {best_reward:.2f}, "

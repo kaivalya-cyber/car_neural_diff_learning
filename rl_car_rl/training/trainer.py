@@ -35,6 +35,8 @@ class PPOTrainer:
         eps_clip: float = 0.2,
         max_grad_norm: float = 0.5,
         lr_decay: float = 0.999,
+        entropy_coef: float = 0.01,
+        entropy_decay: float = 1.0,
         device: str = "cpu",
     ):
         self.gamma = gamma
@@ -43,6 +45,8 @@ class PPOTrainer:
         self.K_epochs = K_epochs
         self.max_grad_norm = max_grad_norm
         self.lr_decay = lr_decay
+        self.entropy_coef = entropy_coef
+        self.entropy_decay = entropy_decay
         self.device = torch.device(device)
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -167,7 +171,7 @@ class PPOTrainer:
                 * advantages
             )
 
-            policy_loss = -torch.min(surr1, surr2).mean() - 0.01 * dist_entropy.mean()
+            policy_loss = -torch.min(surr1, surr2).mean() - self.entropy_coef * dist_entropy.mean()
             value_loss = 0.5 * self.MseLoss(state_values, returns).mean()
 
             loss = policy_loss + value_loss
@@ -198,6 +202,9 @@ class PPOTrainer:
         # Step the learning rate schedulers
         self.policy_scheduler.step()
         self.value_scheduler.step()
+
+        # Decay entropy coefficient
+        self.entropy_coef *= self.entropy_decay
 
         return total_policy_loss / self.K_epochs, total_value_loss / self.K_epochs
 
@@ -230,6 +237,9 @@ class PPOTrainer:
                 "value_net": value_sd,
                 "value_optimizer": self.value_optimizer.state_dict(),
                 "value_scheduler": self.value_scheduler.state_dict(),
+                "entropy_coef": self.entropy_coef,
+                "entropy_decay": self.entropy_decay,
+                "state_dim": self.state_dim,
             },
             path,
         )
@@ -263,5 +273,10 @@ class PPOTrainer:
 
         if "value_scheduler" in checkpoint:
             self.value_scheduler.load_state_dict(checkpoint["value_scheduler"])
+
+        if "entropy_coef" in checkpoint:
+            self.entropy_coef = checkpoint["entropy_coef"]
+        if "entropy_decay" in checkpoint:
+            self.entropy_decay = checkpoint["entropy_decay"]
 
         return True

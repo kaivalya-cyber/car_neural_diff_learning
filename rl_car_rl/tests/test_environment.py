@@ -14,14 +14,14 @@ class TestEnvironment(unittest.TestCase):
     def test_environment_reset(self):
         # Validate environment reset()
         obs = self.env.reset()
-        self.assertEqual(len(obs), 9)
+        self.assertEqual(len(obs), self.env.state_dim)
         self.assertEqual(self.env.current_step, 0)
         self.assertIsInstance(obs, np.ndarray)
 
     def test_sensor_outputs(self):
         # Validate sensor outputs format and bounds
         obs = self.env.reset()
-        sensor_readings = obs[:5]
+        sensor_readings = obs[:self.env.sensor_count]
         for reading in sensor_readings:
             self.assertTrue(0.0 <= reading <= 1.0)
             
@@ -29,7 +29,7 @@ class TestEnvironment(unittest.TestCase):
         self.env.reset()
         action = [0.0, 1.0] # straight, full throttle
         obs, reward, done, info = self.env.step(action)
-        self.assertEqual(len(obs), 9)
+        self.assertEqual(len(obs), self.env.state_dim)
         self.assertIsInstance(reward, float)
         self.assertIsInstance(done, bool)
         self.assertIn("crashed", info)

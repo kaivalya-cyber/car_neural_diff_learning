@@ -18,8 +18,11 @@ def evaluate():
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
 
-    env = CarEnv()
-    trainer = PPOTrainer(state_dim=9, action_dim=2)
+    sensor_count = config.get("sensor_count", 16)
+    state_dim = sensor_count + 4
+
+    env = CarEnv(sensor_count=sensor_count)
+    trainer = PPOTrainer(state_dim=state_dim, action_dim=2)
     
     if not trainer.load("checkpoints/latest.pth"):
         print("Running with random weights...")
@@ -37,7 +40,7 @@ def evaluate():
         running = renderer.render()
         
         if done:
-            print(f"Episode Done. Crashed: {info.get('crashed', False)}, Steps: {env.current_step}, Reward: {reward}")
+            print(f"Episode Done. Crashed: {info.get('crashed', False)}, Steps: {env.current_step}, Reward: {reward:.2f}, Laps: {info.get('lap_count', 0)}")
             state = env.reset()
             time.sleep(1)
             
@@ -46,10 +49,11 @@ def evaluate():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="RL Car Agent Execution")
     parser.add_argument('--mode', choices=['train', 'evaluate', 'tune'], default='train', help='Mode to run: train, evaluate, or tune')
+    parser.add_argument('--resume', action='store_true', help='Resume training from latest checkpoint')
     args = parser.parse_args()
 
     if args.mode == 'train':
-        train_agent()
+        train_agent(resume=args.resume)
     elif args.mode == 'evaluate':
         evaluate()
     elif args.mode == 'tune':
