@@ -5,6 +5,7 @@ import time
 from env.vector_env import VectorEnv
 from training.trainer import PPOTrainer, Memory
 from training.curriculum import CurriculumManager
+from training.experiment_tracker import ExperimentTracker
 from torch.utils.tensorboard import SummaryWriter
 import torch
 
@@ -125,6 +126,9 @@ def train_agent(
             print("No checkpoint found; starting fresh.")
 
     memory = Memory()
+
+    # Setup experiment tracking
+    tracker = ExperimentTracker(output_dir=logs_dir, config=config)
 
     # Setup TensorBoard and CSV logging
     logs_dir = os.path.join(base_dir, "logs")
@@ -293,9 +297,12 @@ def train_agent(
                     
                     # Top-K management: save with episode prefix
                     if top_k > 0:
-                        trainer.save(
+                        path = trainer.save(
                             is_best=True, checkpoint_dir=checkpoint_dir,
                             episode=episodes_completed
+                        )
+                        tracker.record_checkpoint(
+                            current_ep_rewards[i], episodes_completed, path
                         )
                         top_k_rewards.append((current_ep_rewards[i], episodes_completed))
                         top_k_rewards.sort(key=lambda x: x[0], reverse=True)
@@ -434,6 +441,16 @@ def train_agent(
     trainer.save(is_best=False, checkpoint_dir=checkpoint_dir)
     if use_pbar and pbar is not None:
         pbar.close()
+    
+    # Finalize experiment tracking
+    tracker.record_metrics({
+        "best_reward": float(best_reward),
+        "episodes_completed": episodes_completed,
+        "final_curriculum_level": float(curriculum.level),
+        "early_stopped": episodes_completed - last_improvement_episode >= early_stop_patience,
+    })
+    tracker.finalize()
+    
     print(
         f"Training Complete. Best reward: {best_reward:.2f}, "
         f"Episodes: {episodes_completed}"

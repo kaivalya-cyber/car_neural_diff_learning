@@ -4,6 +4,7 @@ from env.physics import PhysicsEngine
 from env.sensors import SensorSystem
 from env.environment import CarEnv
 from env.vector_env import VectorEnv
+from env.multi_car_env import MultiCarEnv
 
 __all__ = [
     "Car",
@@ -12,4 +13,5 @@ __all__ = [
     "SensorSystem",
     "CarEnv",
     "VectorEnv",
+    "MultiCarEnv",
 ]
