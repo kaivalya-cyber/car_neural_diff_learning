@@ -177,3 +177,24 @@ class Track:
         closest_idx = np.argmin(dists)
         
         return float(closest_idx) / len(self.center_points)
+    
+    def get_center_distance(self, x, y):
+        """
+        Returns the normalized distance [0, 1] from the car to the track centerline.
+        0 = on centerline, 1 = at or beyond track edge.
+        """
+        if not self.center_points or not self.outer_boundary or not self.inner_boundary:
+            return 0.0
+        
+        points = np.array(self.center_points)
+        target = np.array([x, y])
+        diff = points - target
+        dists = np.sum(diff**2, axis=1)
+        closest_idx = np.argmin(dists)
+        
+        closest_center = points[closest_idx]
+        dist_to_center = float(np.linalg.norm(target - closest_center))
+        
+        half_width = self.track_width / 2.0
+        normalized = min(dist_to_center / half_width, 1.0)
+        return normalized

@@ -11,7 +11,7 @@ from visualization.renderer import Renderer
 
 def evaluate():
     env = CarEnv()
-    trainer = PPOTrainer(state_dim=7, action_dim=2)
+    trainer = PPOTrainer(state_dim=9, action_dim=2)
     
     try:
         trainer.load("checkpoints/latest.pth")

@@ -15,6 +15,7 @@ class CarEnv:
         self.current_step = 0
         self.dt = 0.1
         self.previous_progress = 0.0
+        self.previous_steering = 0.0
         self.track_params = {}
         
     def set_difficulty(self, params):
@@ -26,6 +27,7 @@ class CarEnv:
         self.car.reset(start["x"], start["y"], start["heading"])
         self.current_step = 0
         self.previous_progress = self.track.get_distance_along_track(self.car.x, self.car.y)
+        self.previous_steering = 0.0
         return self._get_observation()
         
     def _get_observation(self):
@@ -94,13 +96,25 @@ class CarEnv:
         
         done = crashed or self.current_step >= self.max_steps
         
-        reward = compute_reward(self.car.velocity, progress_diff, crashed, done)
+        # Compute center distance for reward
+        center_distance = self.track.get_center_distance(self.car.x, self.car.y)
+        
+        # Compute steering change for smoothness penalty
+        steering_change = abs(float(steering) - self.previous_steering)
+        self.previous_steering = float(steering)
+        
+        reward = compute_reward(
+            self.car.velocity, progress_diff, crashed, done,
+            center_distance=center_distance,
+            steering_change=steering_change,
+        )
         
         info = {
             "x": self.car.x,
             "y": self.car.y,
             "velocity": self.car.velocity,
-            "crashed": crashed
+            "crashed": crashed,
+            "center_distance": center_distance,
         }
         
         return obs, reward, done, info
