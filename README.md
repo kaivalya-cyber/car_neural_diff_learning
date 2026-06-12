@@ -113,6 +113,9 @@ Predicts imminent crashes by monitoring sensor proximity, velocity drops, and st
 ### Telemetry Recorder
 Records per-step telemetry data (position, heading, velocity, steering, throttle, reward, sensor readings) to CSV files during evaluation. `utils/telemetry_recorder.py` creates one CSV per episode for detailed post-hoc analysis and visualization of agent behavior trajectories. Run via `python3 main.py --mode telemetry`.
 
+### Learning Rate Finder
+Implements the LR range test to find optimal learning rate bounds. `utils/lr_finder.py` runs a model through exponentially increasing learning rates, tracking the loss curve to identify the steepest descent region and recommending the optimal learning rate for stable training convergence. Run via `python3 main.py --mode lr-find`.
+
 ### Training Dashboards
 To eliminate threading pauses locking up the primary model trainer during rendering sequences, visualization runs entirely decoupled externally! `visualization/dashboard.py` runs Python's matplotlib async looping `logs/metrics.csv` reading generated scalars visually graphing the 100-episode Reward Moving Average vs the target Curriculum Difficulty level. 
 
