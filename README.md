@@ -95,6 +95,9 @@ Averages weights from multiple top-K checkpoints to create an ensemble model tha
 ### Stochastic Evaluation
 Runs evaluation across multiple random seeds to produce robust, statistically meaningful metrics. `utils/stochastic_eval.py` runs the agent over configurable episodes and seeds, reporting mean/std reward across both episodes and seeds for reliable performance benchmarking. Run via `python3 main.py --mode stochastic-eval`.
 
+### Training Profiler
+Measures per-section timing breakdown of the training loop: environment step, policy inference, memory append, PPO update, curriculum update, validation, and checkpoint saving. `utils/train_profiler.py` helps identify bottlenecks to optimize training throughput. Run via `python3 main.py --mode train-profile`.
+
 ### Training Dashboards
 To eliminate threading pauses locking up the primary model trainer during rendering sequences, visualization runs entirely decoupled externally! `visualization/dashboard.py` runs Python's matplotlib async looping `logs/metrics.csv` reading generated scalars visually graphing the 100-episode Reward Moving Average vs the target Curriculum Difficulty level. 
 
