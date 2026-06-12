@@ -89,6 +89,9 @@ Adjusts exploration noise dynamically based on reward plateaus. `utils/noise_sch
 ### Gradient Monitor
 Tracks gradient norms, max, mean, and parameter norms during training to detect exploding/vanishing gradients. `utils/gradient_monitor.py` provides early warnings when gradients exceed safe thresholds and logs gradient statistics for TensorBoard integration. Run via `python3 main.py --mode gradient-monitor`.
 
+### Checkpoint Ensemble
+Averages weights from multiple top-K checkpoints to create an ensemble model that generalizes better than any single checkpoint. `utils/checkpoint_ensemble.py` discovers best_ep* checkpoints, averages their policy network weights, and saves the result. Run via `python3 main.py --mode checkpoint-ensemble`.
+
 ### Training Dashboards
 To eliminate threading pauses locking up the primary model trainer during rendering sequences, visualization runs entirely decoupled externally! `visualization/dashboard.py` runs Python's matplotlib async looping `logs/metrics.csv` reading generated scalars visually graphing the 100-episode Reward Moving Average vs the target Curriculum Difficulty level. 
 
