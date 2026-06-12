@@ -337,6 +337,9 @@ if __name__ == "__main__":
     elif args.mode == "reward-breakdown":
         from utils.reward_breakdown import main as rb_main
         rb_main()
+    elif args.mode == "lap-timer":
+        from utils.lap_timer import main as lt_main
+        lt_main()
     elif args.mode == "validate":
         from utils.config_validator import validate_config_file
         paths = [os.path.join("configs", "hyperparameters.yaml"), os.path.join("configs", "presets")]

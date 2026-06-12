@@ -77,6 +77,9 @@ Prints a detailed per-layer breakdown of the Policy (Actor) and Value (Critic) n
 ### Reward Breakdown
 Tracks individual reward components (progress, speed zone, centerline, smoothness, time penalty, crash) across episodes. `utils/reward_breakdown.py` can log per-step breakdown during training and analyze logged CSV metrics post-hoc. Run via `python3 main.py --mode reward-breakdown`.
 
+### Lap Timer
+Records per-lap timing statistics during evaluation episodes including average, best, worst lap times and standard deviation. `utils/lap_timer.py` works with the trained policy to measure lap performance across multiple episodes. Run via `python3 main.py --mode lap-timer`.
+
 ### Training Dashboards
 To eliminate threading pauses locking up the primary model trainer during rendering sequences, visualization runs entirely decoupled externally! `visualization/dashboard.py` runs Python's matplotlib async looping `logs/metrics.csv` reading generated scalars visually graphing the 100-episode Reward Moving Average vs the target Curriculum Difficulty level. 
 
