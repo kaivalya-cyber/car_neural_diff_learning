@@ -110,6 +110,9 @@ Generates occupancy and crash-rate heatmaps by recording the agent's position an
 ### Early Crash Detector
 Predicts imminent crashes by monitoring sensor proximity, velocity drops, and steering angular velocity spikes. `utils/crash_detector.py` provides real-time crash risk assessment (0.0-1.0) using a sliding window analysis, enabling proactive intervention before collisions occur. Run via `python3 main.py --mode crash-detect`.
 
+### Telemetry Recorder
+Records per-step telemetry data (position, heading, velocity, steering, throttle, reward, sensor readings) to CSV files during evaluation. `utils/telemetry_recorder.py` creates one CSV per episode for detailed post-hoc analysis and visualization of agent behavior trajectories. Run via `python3 main.py --mode telemetry`.
+
 ### Training Dashboards
 To eliminate threading pauses locking up the primary model trainer during rendering sequences, visualization runs entirely decoupled externally! `visualization/dashboard.py` runs Python's matplotlib async looping `logs/metrics.csv` reading generated scalars visually graphing the 100-episode Reward Moving Average vs the target Curriculum Difficulty level. 
 
