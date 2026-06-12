@@ -80,6 +80,9 @@ Tracks individual reward components (progress, speed zone, centerline, smoothnes
 ### Lap Timer
 Records per-lap timing statistics during evaluation episodes including average, best, worst lap times and standard deviation. `utils/lap_timer.py` works with the trained policy to measure lap performance across multiple episodes. Run via `python3 main.py --mode lap-timer`.
 
+### Track Viewer
+Standalone Pygame-based visualization tool for exploring the procedurally generated track types (procedural, oval, figure-8, multi-loop). `utils/track_viewer.py` allows cycling through random seeds and adjusting track width interactively. Run via `python3 main.py --mode track-viewer`.
+
 ### Training Dashboards
 To eliminate threading pauses locking up the primary model trainer during rendering sequences, visualization runs entirely decoupled externally! `visualization/dashboard.py` runs Python's matplotlib async looping `logs/metrics.csv` reading generated scalars visually graphing the 100-episode Reward Moving Average vs the target Curriculum Difficulty level. 
 

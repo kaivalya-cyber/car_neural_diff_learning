@@ -340,6 +340,51 @@ if __name__ == "__main__":
     elif args.mode == "lap-timer":
         from utils.lap_timer import main as lt_main
         lt_main()
+    elif args.mode == "track-viewer":
+        from utils.track_viewer import main as tv_main
+        tv_main()
+    elif args.mode == "noise-schedule":
+        from utils.noise_scheduler import main as ns_main
+        ns_main()
+    elif args.mode == "gradient-monitor":
+        from utils.gradient_monitor import main as gm_main
+        gm_main()
+    elif args.mode == "checkpoint-ensemble":
+        from utils.checkpoint_ensemble import main as ce_main
+        ce_main()
+    elif args.mode == "stochastic-eval":
+        from utils.stochastic_eval import main as se_main
+        se_main()
+    elif args.mode == "train-profile":
+        from utils.train_profiler import main as tp_main
+        tp_main()
+    elif args.mode == "model-prune":
+        from utils.model_pruner import main as mp_main
+        mp_main()
+    elif args.mode == "config-diff":
+        from utils.config_diff import main as cd_main
+        cd_main()
+    elif args.mode == "heatmap":
+        from utils.heatmap_gen import main as hm_main
+        hm_main()
+    elif args.mode == "crash-detect":
+        from utils.crash_detector import main as cd_main
+        cd_main()
+    elif args.mode == "telemetry":
+        from utils.telemetry_recorder import main as tr_main
+        tr_main()
+    elif args.mode == "lr-find":
+        from utils.lr_finder import main as lf_main
+        lf_main()
+    elif args.mode == "inference-optimize":
+        from utils.inference_optimizer import main as io_main
+        io_main()
+    elif args.mode == "sensor-augment":
+        from utils.sensor_augmenter import main as sa_main
+        sa_main()
+    elif args.mode == "console-dash":
+        from utils.console_dash import main as dash_main
+        dash_main()
     elif args.mode == "validate":
         from utils.config_validator import validate_config_file
         paths = [os.path.join("configs", "hyperparameters.yaml"), os.path.join("configs", "presets")]
