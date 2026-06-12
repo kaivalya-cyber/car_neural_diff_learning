@@ -156,7 +156,7 @@ def load_preset(name: str) -> dict | None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="RL Car Agent Execution")
-    parser.add_argument("--mode", choices=["train", "evaluate", "tune", "race", "export", "dataset", "clone", "benchmark", "analytics", "smoke-test", "self-play", "compare-tracks", "dashboard", "serve", "ablate", "profile", "validate"], default="train")
+    parser.add_argument("--mode", choices=["train", "evaluate", "tune", "race", "export", "dataset", "clone", "benchmark", "analytics", "smoke-test", "self-play", "compare-tracks", "dashboard", "serve", "ablate", "profile", "validate", "model-summary", "reward-breakdown", "lap-timer", "track-viewer", "noise-schedule", "gradient-monitor", "checkpoint-ensemble", "stochastic-eval", "train-profile", "model-prune", "config-diff", "heatmap", "crash-detect", "telemetry", "lr-find", "inference-optimize", "sensor-augment", "console-dash"], default="train")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--episodes", type=int, default=10)
     parser.add_argument("--no-render", action="store_true")
@@ -331,6 +331,9 @@ if __name__ == "__main__":
                 except ValueError: return v
         values = [parse_val(v.strip()) for v in known.values.split(",")]
         run_ablation_study(known.param, values, args.episodes, args.output)
+    elif args.mode == "model-summary":
+        from utils.model_summary import main as ms_main
+        ms_main()
     elif args.mode == "validate":
         from utils.config_validator import validate_config_file
         paths = [os.path.join("configs", "hyperparameters.yaml"), os.path.join("configs", "presets")]
