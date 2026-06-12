@@ -83,6 +83,9 @@ Records per-lap timing statistics during evaluation episodes including average, 
 ### Track Viewer
 Standalone Pygame-based visualization tool for exploring the procedurally generated track types (procedural, oval, figure-8, multi-loop). `utils/track_viewer.py` allows cycling through random seeds and adjusting track width interactively. Run via `python3 main.py --mode track-viewer`.
 
+### Adaptive Noise Scheduler
+Adjusts exploration noise dynamically based on reward plateaus. `utils/noise_scheduler.py` monitors recent rewards and increases noise when the agent plateaus (to encourage broader exploration) and decays it when learning progresses. Provides both adaptive and linear schedule modes. Run via `python3 main.py --mode noise-schedule`.
+
 ### Training Dashboards
 To eliminate threading pauses locking up the primary model trainer during rendering sequences, visualization runs entirely decoupled externally! `visualization/dashboard.py` runs Python's matplotlib async looping `logs/metrics.csv` reading generated scalars visually graphing the 100-episode Reward Moving Average vs the target Curriculum Difficulty level. 
 
