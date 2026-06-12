@@ -1,0 +1,17 @@
+{
+  "experiment_dir": "/Users/kaivalyasingh/Downloads/rl_neural_tesla/experiments/20260311_230833",
+  "copied_figures": [
+    "portal/images/generated/reward_vs_training_steps.svg",
+    "portal/images/generated/episode_length_vs_training_steps.svg",
+    "portal/images/generated/crash_rate_vs_training_steps.svg",
+    "portal/images/generated/curriculum_difficulty_vs_training_steps.svg",
+    "portal/images/generated/ppo_policy_value_losses.svg",
+    "portal/images/generated/hyperparameter_tuning_results.svg",
+    "portal/images/generated/ablations_20260312_080245_reward_mean_std.svg",
+    "portal/images/generated/ablations_20260312_080245_episode_length_mean_std.svg",
+    "portal/images/generated/ablations_20260312_080245_crash_free_rate_mean_std.svg",
+    "portal/images/generated/ablations_20260312_080245_curriculum_difficulty_mean_std.svg"
+  ],
+  "history_entries": 5,
+  "session_mentions": 1
+}

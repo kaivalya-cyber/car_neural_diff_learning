@@ -1,0 +1,31 @@
+---
+title: "Repo Truth Ledger"
+description: "The source material used to generate this portal, so reviewers can see what is narrative and what is derived."
+---
+
+# Repo Truth Ledger
+
+This portal is built from repository evidence rather than from generic documentation filler. The generator script reads a narrow set of sources and turns them into reviewer-facing pages. That keeps the site honest about what is implemented, what is measured, and what is still incomplete.
+
+## Core evidence sources
+
+- `README.md`: current high-level project framing and run instructions
+- `ai_context.md`: original scope and phased roadmap
+- `BUGFIXES.md`: explicit runtime fixes recorded with timestamps
+- `rl_car_rl/env/`, `rl_car_rl/agent/`, `rl_car_rl/training/`: implementation truth for simulator and learning system behavior
+- `experiments/20260311_230833`: saved experiment summaries and per-run metrics
+- `figures/figure_metadata.csv` plus selected SVGs in `figures/`: captions and visual outputs
+- `git log`: repository chronology
+- archived local Codex session traces when available: supplemental context only
+
+## Important constraint
+
+The portal does not pretend that deleted planning files such as `prd.md`, `tdd.md`, or `tasks.md` are still available. The current narrative uses the files that remain in the repository plus the actual commit history showing when those deletions happened.
+
+## Session history note
+
+1 archived local Codex session file(s) mention the repo; current evidence is limited and used only as supplemental chronology.
+
+## Why this matters
+
+For a reviewer, the difference between a nice write-up and a trustworthy portal is traceability. This page exists so every strong claim on the site can be mapped back to code, data, logs, or version history already present in the repo.

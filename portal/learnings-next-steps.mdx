@@ -1,0 +1,21 @@
+---
+title: "Learnings and Next Steps"
+description: "What looks solid today, what still feels experimental, and what would most improve the project next."
+---
+
+# Learnings and Next Steps
+
+The strongest part of this repository is the full-stack reinforcement learning loop. The environment, PPO trainer, vectorized environment wrapper, curriculum manager, experiment runner, and plot generation scripts all exist in code and have matching saved artifacts. That gives reviewers something more valuable than an idea: a runnable, inspectable system with evidence.
+
+The most important lesson from the current state is that infrastructure and evidence quality matter almost as much as the base algorithm. The project became much easier to trust once the repo accumulated bug-fix records, reproducible ablation outputs, and publication-quality figures. A working RL environment is useful. A working RL environment with saved comparisons and explicit fixes is much more persuasive.
+
+At the same time, this is not a finished research platform yet. The experiment scope is still relatively small, some docs from earlier planning stages were removed from the repo, and the local archived Codex session history only lightly references this project. Those are manageable limits, but they are worth stating clearly.
+
+## Honest next steps
+
+- expand repeated runs and result packaging beyond the current saved experiment set
+- keep a stronger experiment manifest so runs, seeds, and conclusions are easier to audit
+- add richer evaluation protocols beyond final rolling metrics
+- continue separating polished project artifacts from runtime noise like cache files and local metadata
+- optionally connect this portal to deployment so reviewers can browse it without cloning the repo
+

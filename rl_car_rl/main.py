@@ -156,7 +156,7 @@ def load_preset(name: str) -> dict | None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="RL Car Agent Execution")
-    parser.add_argument("--mode", choices=["train", "evaluate", "tune", "race", "export", "dataset", "clone", "benchmark", "analytics", "smoke-test", "self-play", "compare-tracks", "dashboard"], default="train")
+    parser.add_argument("--mode", choices=["train", "evaluate", "tune", "race", "export", "dataset", "clone", "benchmark", "analytics", "smoke-test", "self-play", "compare-tracks", "dashboard", "serve", "ablate", "profile", "validate"], default="train")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--episodes", type=int, default=10)
     parser.add_argument("--no-render", action="store_true")
@@ -175,6 +175,7 @@ if __name__ == "__main__":
     parser.add_argument("--record-path", default="videos/eval.mp4", help="Path for recorded video")
     parser.add_argument("--quantize", action="store_true", help="Export with int8 quantization")
     parser.add_argument("--port", type=int, default=8080, help="Dashboard server port")
+    parser.add_argument("--validate", action="store_true", help="Validate config files and exit")
     args = parser.parse_args()
 
     if args.preset:
@@ -308,3 +309,45 @@ if __name__ == "__main__":
         if app:
             print(f"Dashboard server starting at http://0.0.0.0:{args.port}")
             app.run(host="0.0.0.0", port=args.port, debug=False)
+    elif args.mode == "serve":
+        from inference_server import create_inference_app as create_inf_app
+        app = create_inf_app(args.checkpoint, args.state_dim, args.onnx)
+        if app:
+            import uvicorn
+            print(f"Inference server starting at http://0.0.0.0:{args.port}")
+            uvicorn.run(app, host="0.0.0.0", port=args.port, log_level="info")
+    elif args.mode == "ablate":
+        from ablate import run_ablation_study
+        # Parse param and values from extra CLI: --param lr --values 0.001,0.01
+        import argparse as ap
+        parser2 = ap.ArgumentParser()
+        parser2.add_argument("--param", required=True)
+        parser2.add_argument("--values", required=True)
+        known, _ = parser2.parse_known_args()
+        def parse_val(v):
+            try: return int(v)
+            except ValueError:
+                try: return float(v)
+                except ValueError: return v
+        values = [parse_val(v.strip()) for v in known.values.split(",")]
+        run_ablation_study(known.param, values, args.episodes, args.output)
+    elif args.mode == "validate":
+        from utils.config_validator import validate_config_file
+        paths = [os.path.join("configs", "hyperparameters.yaml"), os.path.join("configs", "presets")]
+        for item in paths:
+            if os.path.isdir(item):
+                for f in sorted(os.listdir(item)):
+                    if f.endswith(".yaml") or f.endswith(".yml"):
+                        ok, errors = validate_config_file(os.path.join(item, f))
+                        print(f"[{'OK' if ok else 'FAIL'}] {item}/{f}")
+                        for e in errors:
+                            print(f"  - {e}")
+            else:
+                ok, errors = validate_config_file(item)
+                print(f"[{'OK' if ok else 'FAIL'}] {item}")
+                for e in errors:
+                    print(f"  - {e}")
+    elif args.mode == "profile":
+        from profile_model import profile_model
+        batch_sizes = [1, 8, 32, 128]
+        profile_model(args.checkpoint, args.state_dim, batch_sizes)

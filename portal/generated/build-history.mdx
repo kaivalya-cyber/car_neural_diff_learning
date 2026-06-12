@@ -1,0 +1,141 @@
+---
+title: "Build History"
+description: "A major-change timeline organized around problem, change, and outcome rather than raw commit dumps."
+---
+
+# Build History
+
+This timeline selects the handful of repository changes that materially improved the project’s correctness, readability, or evidence quality. It intentionally skips low-signal maintenance commits and avoids presenting the git log as a substitute for explanation.
+
+A supplemental archived session trace was found in `rollout-2026-03-21T21-47-14-019d13de-6343-7d80-a097-c95c2075b302.jsonl`. It confirms the repo name in a local project inventory, but it does not contain a detailed engineering chronology, so the build history still relies mainly on commits and saved artifacts.
+
+## Initial RL system import
+
+- Date: `2026-03-09`
+- Commit: `569f54c`
+
+**Problem**
+
+The project needed a single repository that combined simulator code, policy/network code, PPO training code, tests, configs, and visualization hooks.
+
+**Change**
+
+The initial import established the `rl_car_rl/` codebase and the basic documentation scaffold described in `README.md` and `ai_context.md`.
+
+**Outcome**
+
+From this point on, the repo had a concrete baseline that could be trained, inspected, and iterated on instead of remaining a planning document.
+
+**Primary evidence**
+
+- `README.md`
+- `ai_context.md`
+- `rl_car_rl/main.py`
+- `rl_car_rl/env/environment.py`
+- `rl_car_rl/env/track.py`
+- `rl_car_rl/agent/policy.py`
+- `rl_car_rl/training/trainer.py`
+- `rl_car_rl/tests/test_environment.py`
+
+## Repository cleanup for reviewability
+
+- Date: `2026-03-10`
+- Commit: `161f3d6`
+
+**Problem**
+
+The repo included unrelated `.minimax/skills` content that distracted from the actual reinforcement learning project.
+
+**Change**
+
+That folder was removed from version control so the top-level tree better reflected the project’s real scope.
+
+**Outcome**
+
+The repository surface became easier for reviewers to scan, and the codebase looked more like a focused portfolio project instead of a mixed workspace dump.
+
+**Primary evidence**
+
+- `.minimax/skills/minimax-docx/check/__init__.py`
+- `.minimax/skills/minimax-docx/check/detectors.py`
+- `.minimax/skills/minimax-docx/check/pipeline.py`
+- `.minimax/skills/minimax-docx/check/report.py`
+- `.minimax/skills/minimax-docx/diagnostics/__init__.py`
+- `.minimax/skills/minimax-docx/diagnostics/compiler.py`
+- `.minimax/skills/minimax-docx/docx_engine.py`
+- `.minimax/skills/minimax-docx/guides/best-practices.md`
+
+## Simulator and policy correctness fixes
+
+- Date: `2026-03-11`
+- Commit: `8d79b82`
+
+**Problem**
+
+The training and rendering paths had multiple correctness issues: missing track dimension attributes, an MPS-versus-CPU action sampling mismatch, and rough track edges that produced visible corner artifacts.
+
+**Change**
+
+The track now stores explicit pixel dimensions, the policy ensures the distribution parameters and sampled actions stay on the same device, and boundary generation smooths tangents to reduce kinks.
+
+**Outcome**
+
+The project became more stable to run locally, more visually coherent, and less likely to fail during action sampling on Apple hardware. These fixes are corroborated by the detailed entries in `BUGFIXES.md`.
+
+**Primary evidence**
+
+- `BUGFIXES.md`
+- `rl_car_rl/agent/policy.py`
+- `rl_car_rl/env/track.py`
+- `rl_car_rl/logs/metrics.csv`
+- `rl_car_rl/visualization/renderer.py`
+
+## Curriculum progression logging fix
+
+- Date: `2026-03-11`
+- Commit: `6d9329f`
+
+**Problem**
+
+The difficulty trace could remain flat because curriculum updates were tied to a counter that did not advance in the way the dashboard expected.
+
+**Change**
+
+The training loop introduced a monotonic `global_step` and used it to drive curriculum update cadence more reliably.
+
+**Outcome**
+
+Difficulty progression became observable in saved metrics and dashboards, which made the curriculum behavior auditable instead of opaque.
+
+**Primary evidence**
+
+- `BUGFIXES.md`
+- `rl_car_rl/training/training_loop.py`
+
+## Multi-seed ablation and figure packaging pass
+
+- Date: `2026-03-12`
+- Commit: `f3ecb80`
+
+**Problem**
+
+The repo needed stronger evidence than a single training run to support claims about curriculum learning, vectorized collection, and training behavior.
+
+**Change**
+
+The experiment pipeline added multi-seed ablations across curriculum/no-curriculum and vectorized/single-environment variants, along with aggregate summaries, curriculum threshold reporting, and publication-style figures.
+
+**Outcome**
+
+The repository gained reviewer-friendly evidence in `experiments/20260311_230833/` and the ablation SVGs under `figures/`, making it much easier to discuss trends with concrete numbers.
+
+**Primary evidence**
+
+- `scripts/run_ablations.py`
+- `scripts/plot_ablations.py`
+- `experiments/20260311_230833/summary.csv`
+- `experiments/20260311_230833/variant_summary.csv`
+- `experiments/20260311_230833/curriculum_thresholds_summary.csv`
+- `figures/ablations_20260312_080245_reward_mean_std.svg`
+- `figures/ablations_20260312_080245_crash_free_rate_mean_std.svg`
+- `figures/figure_metadata.csv`

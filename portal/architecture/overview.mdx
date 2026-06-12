@@ -1,0 +1,43 @@
+---
+title: "Architecture Overview"
+description: "The code-level shape of the project: environment, agent, training, experiments, and outputs."
+---
+
+# Architecture Overview
+
+The project is structured around a clean split between simulation code and learning code. The main runtime entrypoint is `rl_car_rl/main.py`, which dispatches into training, evaluation, or hyperparameter tuning. The training path calls `train_agent()` in `rl_car_rl/training/training_loop.py`, which then instantiates the vectorized environment wrapper, the PPO trainer, TensorBoard logging, CSV metrics logging, checkpoints, and optional curriculum updates.
+
+## Main subsystems
+
+- `rl_car_rl/env/`: the car, the track, the sensor system, the physics step, and the multiprocessing vectorized wrapper.
+- `rl_car_rl/agent/`: the policy wrapper and the underlying multilayer perceptron.
+- `rl_car_rl/training/`: PPO update logic, reward function, curriculum manager, and the top-level training loop.
+- `scripts/`: experiment automation such as ablations and plot generation.
+- `figures/` and `experiments/`: saved outputs that act as evidence rather than just code.
+
+## Why the split matters
+
+This separation gives the repo a useful property for reviewers: the environment can change independently of the PPO update code, and the experiment packaging can evolve independently of the simulator. That is exactly the kind of modularity you want in a reinforcement learning project where environment assumptions often shift while training logic stays mostly stable.
+
+## Representative runtime flow
+
+```python
+from training.training_loop import train_agent
+from training.tuner import tune_hyperparameters
+
+if args.mode == 'train':
+    train_agent()
+elif args.mode == 'evaluate':
+    evaluate()
+elif args.mode == 'tune':
+    tune_hyperparameters()
+```
+
+That small dispatch block in `rl_car_rl/main.py` says a lot. The repo is not organized like a notebook experiment. It is organized like a runnable system with separate modes for learning, inspection, and parameter search.
+
+## Where to go next
+
+- Read [environment and track](environment-and-track) for the simulator side.
+- Read [training system](training-system) for the PPO and curriculum side.
+- Read [repo truth ledger](/generated/repo-truth) for the exact files this portal uses as evidence.
+

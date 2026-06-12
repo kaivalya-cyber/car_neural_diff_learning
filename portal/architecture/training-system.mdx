@@ -1,0 +1,57 @@
+---
+title: "Training System"
+description: "How PPO, multiprocessing rollouts, curriculum learning, and experiment automation fit together."
+---
+
+# Training System
+
+The training path is defined by three main files: `rl_car_rl/training/training_loop.py`, `rl_car_rl/training/trainer.py`, and `rl_car_rl/training/curriculum.py`. Together they handle rollout collection, PPO optimization, curriculum advancement, checkpoints, TensorBoard scalars, and CSV metric logging.
+
+## Training loop orchestration
+
+The outer loop in `training_loop.py` uses `VectorEnv` to collect transitions from many environments at once. It increments both a PPO `time_step` counter and a separate `global_step` counter, logs per-episode reward and crash statistics, saves best and periodic checkpoints, and conditionally advances the curriculum after scheduled intervals.
+
+```python
+final_action, raw_action, log_prob, mean = trainer.policy.get_action(state, deterministic=False)
+next_state, reward, done, info = env.step(final_action)
+
+memory.states.append(state)
+memory.actions.append(raw_action.detach().cpu().numpy())
+memory.logprobs.append(log_prob.detach().cpu().numpy())
+memory.rewards.append(reward)
+memory.is_terminals.append(done)
+```
+
+That design matters because the policy is trained on batched trajectories rather than one episode at a time. It is the main reason the repo can support both single-environment and vectorized ablation variants with the same training code.
+
+## PPO update
+
+The PPO implementation in `trainer.py` uses a policy network plus a separate value network. It stacks rollout tensors, computes discounted rewards per environment, normalizes returns, builds action distributions from the policy mean and learned log standard deviation, and applies the clipped PPO objective together with a value loss term.
+
+```python
+ratios = torch.exp(logprobs - old_logprobs.detach())
+surr1 = ratios * advantages
+surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
+
+policy_loss = -torch.min(surr1, surr2).mean() - 0.01 * dist_entropy.mean()
+value_loss = 0.5 * self.MseLoss(state_values, rewards).mean()
+```
+
+This is the part of the codebase where the project feels most like a classic PPO implementation: compact, explicit, and readable. It does not hide the update logic behind a large RL framework, which is helpful when the goal is understanding and iteration rather than library abstraction.
+
+## Policy and device handling
+
+The policy wrapper in `rl_car_rl/agent/policy.py` handles one more practical concern: device placement. The repo now explicitly keeps the distribution parameters and sampled actions on the same device, which addresses a real MPS-vs-CPU mismatch bug captured in the fix log.
+
+## Curriculum learning
+
+The curriculum manager starts from a wide, easier track distribution and linearly interpolates toward narrower and more irregular tracks as performance crosses reward thresholds. It uses monotonic level increases and a rising threshold target. In the current code, that means the environment becomes harder only after recent performance clears a moving bar.
+
+```python
+if mean_reward >= self.threshold:
+    self.level = min(self.max_level, self.level + self.increase_rate)
+    self.threshold += 10.0
+```
+
+This is intentionally simple. It gives the project a transparent difficulty schedule that can be reasoned about directly from code and then audited in the saved training logs and ablation summaries.
+

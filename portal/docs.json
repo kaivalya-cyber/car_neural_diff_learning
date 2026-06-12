@@ -1,0 +1,56 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Neural Tesla Project Portal",
+  "description": "A reviewer-friendly project portal for the Autonomous Racing RL repository.",
+  "colors": {
+    "primary": "#2A9D8F",
+    "light": "#7FD1C7",
+    "dark": "#1E6B63"
+  },
+  "navigation": [
+    {
+      "group": "Home",
+      "pages": [
+        "index",
+        "project-story"
+      ]
+    },
+    {
+      "group": "Architecture",
+      "pages": [
+        "architecture/overview",
+        "architecture/environment-and-track",
+        "architecture/training-system",
+        "generated/repo-truth"
+      ]
+    },
+    {
+      "group": "Iterations",
+      "pages": [
+        "iterations/system-iterations",
+        "generated/build-history"
+      ]
+    },
+    {
+      "group": "Results",
+      "pages": [
+        "results/experiment-highlights",
+        "generated/results-highlights"
+      ]
+    },
+    {
+      "group": "Gallery",
+      "pages": [
+        "gallery/artifact-gallery",
+        "generated/artifact-gallery"
+      ]
+    },
+    {
+      "group": "Learnings",
+      "pages": [
+        "learnings-next-steps"
+      ]
+    }
+  ]
+}

@@ -68,6 +68,9 @@ Single-node gradient synchronization suffers immensely processing thick vectoriz
 ### Hyperparameter Tuning
 Optimizing hyperparameter combinations conventionally is tedious. `training/tuner.py` executes a mathematical Cartesian product over vectors inside `configs/tune.yaml` running independent testing permutations sequentially dynamically grading final curriculum scaling and returning outputs neatly compiled over `configs/tuning_results.yaml`.
 
+### Config Validator
+Validates YAML configuration files against an expected schema with type, range, and choice checks. `utils/config_validator.py` can be run standalone to verify your `hyperparameters.yaml` and preset files are correct before training, catching typos, out-of-range values, and missing required keys early.
+
 ### Training Dashboards
 To eliminate threading pauses locking up the primary model trainer during rendering sequences, visualization runs entirely decoupled externally! `visualization/dashboard.py` runs Python's matplotlib async looping `logs/metrics.csv` reading generated scalars visually graphing the 100-episode Reward Moving Average vs the target Curriculum Difficulty level. 
 
@@ -119,6 +122,26 @@ rl_car_rl/
 │   ├── trainer.py             # Central PPO loop utilizing dense batched matrices internally
 │   ├── training_loop.py       # Main system hook executing recursive arrays visually 
 │   └── tuner.py               # Decoupled gridsearch instantiation node
+├── utils/
+│   ├── config_validator.py    # YAML schema validation
+│   ├── model_summary.py       # Per-layer architecture summary
+│   ├── reward_breakdown.py    # Individual reward component logging
+│   ├── lap_timer.py           # Per-lap timing statistics
+│   ├── track_viewer.py        # Standalone track visualization
+│   ├── noise_scheduler.py     # Adaptive exploration noise
+│   ├── gradient_monitor.py    # Gradient statistics tracking
+│   ├── checkpoint_ensemble.py # Weight averaging multiple checkpoints
+│   ├── stochastic_eval.py     # Multi-seed robust evaluation
+│   ├── train_profiler.py      # Training loop performance profiler
+│   ├── model_pruner.py        # Weight magnitude pruning
+│   ├── config_diff.py         # Configuration comparison
+│   ├── heatmap_gen.py         # Track position/crash heatmaps
+│   ├── crash_detector.py      # Early crash prediction
+│   ├── telemetry_recorder.py  # Per-step detailed logging
+│   ├── lr_finder.py           # LR range test tool
+│   ├── inference_optimizer.py # Model optimization for deployment
+│   ├── sensor_augmenter.py    # Sensor noise/robustness augmentation
+│   └── console_dash.py        # Live rich console training dashboard
 ├── visualization/
 │   ├── dashboard.py           # Decoupled matplotlib async telemetry
 │   └── renderer.py            # Primary Pygame GUI handler

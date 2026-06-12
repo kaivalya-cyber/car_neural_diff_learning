@@ -1,0 +1,23 @@
+---
+title: "Experiment Highlights"
+description: "What the saved experiment artifacts show at a glance, and where the strongest evidence lives."
+---
+
+# Experiment Highlights
+
+The strongest experiment evidence in the repo is concentrated in `experiments/20260311_230833/` and the related ablation figures under `figures/`. That run set contains four variants with three seeds each:
+
+- `curriculum_vectorized`
+- `no_curriculum_vectorized`
+- `curriculum_single_env`
+- `no_curriculum_single_env`
+
+The generated [results highlights](/generated/results-highlights) page lifts the key findings from those CSVs so reviewers do not have to manually inspect every file. It focuses on the small number of claims that are directly supported by saved outputs:
+
+- which variant finished with the highest mean reward
+- which variant finished with the highest crash-free rate
+- how far curriculum-based variants progressed through the difficulty scale
+- when curriculum thresholds were first reached on average
+
+This page intentionally does not treat every artifact as equally important. The repo contains more raw curves than a typical reviewer wants to inspect. The generated summary narrows that down to the high-signal comparisons and links outward to the gallery when deeper inspection is useful.
+

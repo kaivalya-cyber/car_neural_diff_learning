@@ -1,0 +1,23 @@
+---
+title: "Project Story"
+description: "What the repository is trying to accomplish, how it evolved, and how to read the evidence."
+---
+
+# Project Story
+
+At its core, this repository is trying to answer a simple but meaningful question: can a small, custom reinforcement learning stack teach a car to drive on procedurally generated tracks without leaning on a heavyweight simulator? The answer in this repo is not framed as a polished benchmark suite. It is framed as a build-and-learn system that combines environment design, PPO training, vectorized rollout collection, curriculum progression, and experiment packaging in one place.
+
+The original planning material in `ai_context.md` lays out a staged roadmap: environment first, sensors and observation next, then policy learning, then visualization and metrics. That staged structure still shows up in the code layout today. The environment logic lives under `rl_car_rl/env/`, the policy and network definitions live under `rl_car_rl/agent/`, and the training loop and PPO update logic live under `rl_car_rl/training/`.
+
+What makes the project compelling for a reviewer is not just that it trains. It is that the repo now contains visible evidence of iteration. There are fixes for rendering geometry and device mismatch bugs, a curriculum update cadence correction, and a multi-seed ablation pass that compares curriculum against no curriculum and vectorized collection against single-environment collection. Those changes can be tracked in `git` history, `BUGFIXES.md`, and the saved experiment summaries under `experiments/20260311_230833/`.
+
+This portal is organized to make that story easier to audit:
+
+- `Architecture` explains what the code actually does.
+- `Iterations` reconstructs how the system changed over time.
+- `Results` highlights the strongest findings from saved experiment artifacts.
+- `Gallery` surfaces the most useful plots without burying the reader in every file.
+- `Learnings` keeps the unfinished edges visible instead of overselling them.
+
+That last point matters. Some parts of the repo are clearly more mature than others. The PPO pipeline, vectorized environment wrapper, curriculum manager, figure generation, and ablation scripts all have concrete code and saved outputs. Other parts still look like student-project or lab-style infrastructure, which is totally fine as long as it is presented honestly. This portal keeps that line clear.
+

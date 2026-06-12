@@ -1,0 +1,108 @@
+---
+title: "Generated Artifact Gallery"
+description: "Selected training and ablation visuals copied into the Mintlify portal."
+---
+
+# Generated Artifact Gallery
+
+This page is produced from the current `figures/` directory and the caption metadata stored in `figures/figure_metadata.csv`. Only a curated subset of assets is included so the portal remains reviewer-friendly.
+
+## reward_vs_training_steps.svg
+
+![reward_vs_training_steps.svg](/images/generated/reward_vs_training_steps.svg)
+
+**Caption:** Episode reward trajectory over training, with a 10-episode moving average indicating progressive performance gains.
+
+**Why it matters:** This figure plots per-episode reward against logged training step and overlays a 10-episode moving average. The series shows high variance with an upward trend, reflecting increasing policy competence while preserving episodic stochasticity.
+
+**Original section tag:** Results
+
+## episode_length_vs_training_steps.svg
+
+![episode_length_vs_training_steps.svg](/images/generated/episode_length_vs_training_steps.svg)
+
+**Caption:** Episode length as a function of training step, with moving-average smoothing to reveal stability trends.
+
+**Why it matters:** Per-episode duration is plotted against training step to characterize survivability and control consistency. The moving-average line highlights changes in sustained driving behavior across training.
+
+**Original section tag:** Results
+
+## crash_rate_vs_training_steps.svg
+
+![crash_rate_vs_training_steps.svg](/images/generated/crash_rate_vs_training_steps.svg)
+
+**Caption:** Binary crash outcomes and smoothed crash rate across training steps.
+
+**Why it matters:** Each point indicates whether an episode terminated by crash (1) or not (0), and the moving average summarizes the short-horizon failure rate. This view captures safety-related behavior throughout policy learning.
+
+**Original section tag:** Safety Analysis
+
+## curriculum_difficulty_vs_training_steps.svg
+
+![curriculum_difficulty_vs_training_steps.svg](/images/generated/curriculum_difficulty_vs_training_steps.svg)
+
+**Caption:** Curriculum difficulty level recorded over training steps.
+
+**Why it matters:** The curriculum scalar logged per episode is shown to track environment difficulty progression over time. In this run, the line reveals whether threshold-based level updates were reached.
+
+**Original section tag:** Method
+
+## ppo_policy_value_losses.svg
+
+![ppo_policy_value_losses.svg](/images/generated/ppo_policy_value_losses.svg)
+
+**Caption:** PPO policy and value loss traces over logged optimization steps.
+
+**Why it matters:** This plot reports policy and critic losses from TensorBoard scalars in the selected training event file. The points correspond to optimizer update checkpoints and quantify the optimization dynamics observed in this run.
+
+**Original section tag:** Training Dynamics
+
+## hyperparameter_tuning_results.svg
+
+![hyperparameter_tuning_results.svg](/images/generated/hyperparameter_tuning_results.svg)
+
+**Caption:** Hyperparameter sweep outcomes showing final reward by configuration rank, colored by achieved curriculum level.
+
+**Why it matters:** Each point corresponds to one hyperparameter configuration from the tuning grid and reports the run-level final reward. Color encodes achieved curriculum level to jointly assess return quality and difficulty progression.
+
+**Original section tag:** Ablation / Hyperparameter Study
+
+## ablations_20260312_080245_reward_mean_std.svg
+
+![ablations_20260312_080245_reward_mean_std.svg](/images/generated/ablations_20260312_080245_reward_mean_std.svg)
+
+**Caption:** Mean and standard deviation reward trajectories across the four ablation variants.
+
+**Why it matters:** This figure compares reward progression across curriculum and non-curriculum variants, as well as single-environment and vectorized collection settings.
+
+**Original section tag:** Ablation Study
+
+## ablations_20260312_080245_episode_length_mean_std.svg
+
+![ablations_20260312_080245_episode_length_mean_std.svg](/images/generated/ablations_20260312_080245_episode_length_mean_std.svg)
+
+**Caption:** Mean and standard deviation episode length trajectories across the four ablation variants.
+
+**Why it matters:** This plot emphasizes survivability and control stability differences between the saved training variants.
+
+**Original section tag:** Ablation Study
+
+## ablations_20260312_080245_crash_free_rate_mean_std.svg
+
+![ablations_20260312_080245_crash_free_rate_mean_std.svg](/images/generated/ablations_20260312_080245_crash_free_rate_mean_std.svg)
+
+**Caption:** Mean and standard deviation crash-free rate across the four ablation variants.
+
+**Why it matters:** This view highlights the safety tradeoffs in the saved runs, especially when comparing curriculum progression against the stronger no-curriculum single-environment baseline.
+
+**Original section tag:** Safety Analysis
+
+## ablations_20260312_080245_curriculum_difficulty_mean_std.svg
+
+![ablations_20260312_080245_curriculum_difficulty_mean_std.svg](/images/generated/ablations_20260312_080245_curriculum_difficulty_mean_std.svg)
+
+**Caption:** Mean and standard deviation curriculum difficulty progression across ablation variants.
+
+**Why it matters:** Only curriculum-enabled variants climb the difficulty scale, making this plot the most direct visual check that the curriculum logic was actually engaged during those runs.
+
+**Original section tag:** Method

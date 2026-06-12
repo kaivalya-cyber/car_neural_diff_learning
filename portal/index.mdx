@@ -1,0 +1,36 @@
+---
+title: "Neural Tesla"
+description: "A polished project portal for understanding the code, the experiments, and the iteration story behind this reinforcement learning racing system."
+---
+
+# Neural Tesla
+
+This portal is the reviewer-friendly front door for the `Autonomous Racing RL (Neural Tesla)` repository. Instead of presenting the project as a raw code dump or a pile of plots, it organizes the work as a technical case study: what the system does, how the main components fit together, what changed over time, and which experiment artifacts support the strongest claims.
+
+The underlying repository implements a procedural 2D racing environment, a PyTorch policy/value stack, PPO training logic, multiprocessing vectorized environments, curriculum-based difficulty scaling, and experiment scripts for ablations and figure generation. The portal stays grounded in those exact files and generated artifacts. It intentionally favors evidence over hype.
+
+## What reviewers can learn quickly
+
+- What the agent observes, predicts, and optimizes.
+- How the environment, PPO trainer, and curriculum logic are separated in code.
+- Which implementation fixes materially changed behavior.
+- Which experiment variants performed best under the saved runs.
+- Which parts of the repo are solid, and which parts are still clearly experimental.
+
+## How this portal is assembled
+
+Some pages are written manually to explain intent and architecture. Other pages are generated from repository truth, including:
+
+- `git` history
+- experiment CSV files in `experiments/`
+- saved figures in `figures/`
+- existing documentation such as `README.md`, `ai_context.md`, and `BUGFIXES.md`
+- limited archived local Codex session traces when they mention this repo
+
+## Start here
+
+- Read the [project story](project-story) for the high-level narrative.
+- Jump to [architecture overview](architecture/overview) for the code layout.
+- Use [build history](generated/build-history) if you want the actual improvement chronology.
+- Use [results highlights](generated/results-highlights) if you want the strongest evidence first.
+

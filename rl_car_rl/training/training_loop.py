@@ -10,6 +10,31 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 
 
+def _save_episode_trace(logs_dir, episode, reward, length, crash_rate, info):
+    """Save detailed episode trace for debugging and analysis."""
+    import json
+    trace_dir = os.path.join(logs_dir, "traces")
+    os.makedirs(trace_dir, exist_ok=True)
+    trace = {
+        "episode": episode,
+        "reward": float(reward),
+        "length": int(length),
+        "crash_rate": float(crash_rate),
+        "x": float(info.get("x", 0)),
+        "y": float(info.get("y", 0)),
+        "velocity": float(info.get("velocity", 0)),
+        "crashed": bool(info.get("crashed", False)),
+        "obstacle_crash": bool(info.get("obstacle_crash", False)),
+        "center_distance": float(info.get("center_distance", 0)),
+        "lap_count": int(info.get("lap_count", 0)),
+        "progress": float(info.get("progress", 0)),
+        "obstacles": int(info.get("obstacles", 0)),
+    }
+    trace_path = os.path.join(trace_dir, f"trace_{episode:06d}.json")
+    with open(trace_path, "w") as f:
+        json.dump(trace, f)
+
+
 def run_validation_episode(trainer, device, sensor_count, obstacle_count=0, track_type="procedural"):
     """Run one deterministic evaluation episode on a single environment."""
     from env.environment import CarEnv
@@ -78,6 +103,7 @@ def train_agent(
 
     action_repeat = config.get("action_repeat", 1)
     sensor_front_density = config.get("sensor_front_density", 1.0)
+    trace_log_interval = config.get("trace_log_interval", 0)
     env = VectorEnv(num_envs=num_envs, sensor_count=sensor_count, obstacle_count=obstacle_count, track_type=track_type, action_repeat=action_repeat, sensor_front_density=sensor_front_density)
 
     device = torch.device(
@@ -296,6 +322,11 @@ def train_agent(
                         "metrics/center_distance": center_dist,
                         "metrics/laps": laps_done,
                     }, step=episodes_completed)
+
+                # Trace logging: save detailed episode data periodically
+                if trace_log_interval > 0 and episodes_completed % trace_log_interval == 0:
+                    _save_episode_trace(logs_dir, episodes_completed, current_ep_rewards[i],
+                                       current_ep_lengths[i], crash_rate, info[i])
 
                 if episodes_completed % 10 == 0:
                     fps = int(

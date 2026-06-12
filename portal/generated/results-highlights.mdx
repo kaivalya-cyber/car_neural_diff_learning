@@ -1,0 +1,42 @@
+---
+title: "Results Highlights"
+description: "High-signal findings extracted from the saved ablation summaries and curriculum threshold reports."
+---
+
+# Results Highlights
+
+The strongest experiment evidence currently in the repo comes from `experiments/20260311_230833`. That directory contains four variants, three seeds per variant, aggregate curves, per-seed summaries, and curriculum threshold summaries. The goal of this page is to surface the strongest claims from that bundle without turning the page into a raw file listing.
+
+## Snapshot highlights
+
+| Highlight | Value | Evidence |
+| --- | --- | --- |
+| Highest final reward mean | no_curriculum_single_env (382.18) | `experiments/20260311_230833/variant_summary.csv` |
+| Highest crash-free mean | no_curriculum_single_env (0.70) | `experiments/20260311_230833/variant_summary.csv` |
+| Farthest curriculum progression | curriculum_single_env (difficulty 1.00) | `experiments/20260311_230833/variant_summary.csv` |
+
+## Variant summary
+
+| Variant | Final reward mean | Final length mean | Final crash-free mean | Final curriculum level mean |
+| --- | --- | --- | --- | --- |
+| curriculum_single_env | 59.81 | 221.80 | 0.03 | 1.00 |
+| curriculum_vectorized | 162.17 | 439.43 | 0.27 | 0.68 |
+| no_curriculum_single_env | 382.18 | 890.47 | 0.70 | 0.00 |
+| no_curriculum_vectorized | 19.38 | 189.30 | 0.00 | 0.00 |
+
+A few patterns stand out immediately. The single-environment, no-curriculum variant ends with the highest mean reward and the strongest crash-free rate in the saved summary. The curriculum-enabled single-environment variant reaches the full difficulty ceiling of `1.0`, while the curriculum-enabled vectorized variant progresses partway through the scale but not to the final threshold in the saved 1000-episode runs.
+
+## Curriculum thresholds
+
+| Variant | Threshold 0.2 | Threshold 0.4 | Threshold 0.6 | Threshold 0.8 | Threshold 1.0 |
+| --- | --- | --- | --- | --- | --- |
+| curriculum_vectorized | 449.7 | 600.7 | 778.0 | not reached | not reached |
+| no_curriculum_vectorized | not reached | not reached | not reached | not reached | not reached |
+| curriculum_single_env | 31.7 | 50.0 | 60.7 | 95.3 | 224.3 |
+| no_curriculum_single_env | not reached | not reached | not reached | not reached | not reached |
+
+The threshold table makes the tradeoff visible: `curriculum_single_env` climbs the difficulty ladder much faster in the saved runs, while `curriculum_vectorized` reaches intermediate thresholds later on average and does not reach `0.8` or `1.0` within the reported horizon.
+
+## Scope note
+
+These findings are intentionally narrow. They describe the saved experiment bundle that exists in the repo today. They do not claim broader generality than the current runs support.

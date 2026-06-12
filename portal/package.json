@@ -1,0 +1,9 @@
+{
+  "name": "neural-tesla-mintlify-portal",
+  "private": true,
+  "scripts": {
+    "generate": "python3 ../scripts/generate_mintlify_portal.py",
+    "validate": "python3 ../scripts/generate_mintlify_portal.py --validate-only",
+    "dev": "mint dev"
+  }
+}

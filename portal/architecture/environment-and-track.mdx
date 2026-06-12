@@ -1,0 +1,50 @@
+---
+title: "Environment and Track"
+description: "How the simulator works: observations, progress, collisions, and procedural track generation."
+---
+
+# Environment and Track
+
+The environment implementation is centered on `rl_car_rl/env/environment.py`. Each episode creates a fresh procedural track, resets the car to a sampled start pose on the centerline, and returns a 9-dimensional observation vector. That vector is composed of five sensor readings plus four scalar state features: normalized velocity, normalized heading, normalized angular velocity, and a heuristic distance-from-center term.
+
+## Observation construction
+
+```python
+sensor_readings = self.sensors.get_readings(self.car, self.track)
+car_state = self.car.get_state()
+
+normalized_velocity = car_state["velocity"] / self.physics.max_speed
+normalized_heading = car_state["heading"] / math.pi
+normalized_angular_vel = car_state["angular_velocity"] / 2.0
+```
+
+This is a pragmatic state design. It is compact enough for a small MLP, but it still exposes both local geometry through ray-style sensors and global motion state through the normalized scalars.
+
+## Step logic
+
+On each `step()`, the environment applies steering and throttle through the physics engine, rebuilds the observation, measures progress along the centerline, checks collision against the inner and outer track polygons, and computes reward through `training.reward_function.compute_reward`. That keeps the reward function logically separate from the environment step while still allowing the environment to provide the contextual signals the reward depends on.
+
+```python
+self.physics.update(self.car, steering, throttle, self.dt)
+current_progress = self.track.get_distance_along_track(self.car.x, self.car.y)
+crashed = self.track.check_collision(corners)
+reward = compute_reward(self.car.velocity, progress_diff, crashed, done)
+```
+
+## Procedural track generation
+
+The track implementation in `rl_car_rl/env/track.py` generates a closed loop from random radii sampled around evenly spaced angles, then smooths those control points with a Catmull-Rom spline. After that, the code computes inner and outer boundaries using averaged tangents and perpendicular normals.
+
+```python
+angles = np.linspace(0, 2 * np.pi, num_control_points, endpoint=False)
+radii = np.random.uniform(min_radius, max_radius, size=num_control_points)
+self.center_points = self._compute_catmull_rom_spline(control_points, points_per_segment=20)
+self._generate_boundaries()
+```
+
+The key design choice here is that the environment does not train on one fixed loop. It trains on a distribution of loops whose width, radius range, and control-point count can be changed by the curriculum manager. That means the track generator is not just a rendering detail. It is one of the central levers in the learning problem.
+
+## What changed over time
+
+The current track code reflects one of the important bug-fix phases captured in `BUGFIXES.md`. The repo now stores `track_width_px` and `track_height_px` explicitly for renderer alignment, and the boundary generation smooths tangents to reduce sharp visual artifacts and collision oddities. Those changes are important enough to show up later in the build-history section because they improved both presentation quality and geometric consistency.
+

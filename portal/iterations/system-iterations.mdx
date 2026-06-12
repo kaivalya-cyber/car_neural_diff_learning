@@ -1,0 +1,23 @@
+---
+title: "System Iterations"
+description: "How to read the project’s iteration story without reducing it to a raw commit dump."
+---
+
+# System Iterations
+
+The repo’s iteration story is more meaningful than the raw commit count suggests. The visible changes cluster around a few themes:
+
+- getting the initial environment, agent, and training structure in place
+- cleaning the repository surface so the core project is easier to review
+- fixing simulator and policy issues that affected runtime correctness
+- correcting curriculum progression behavior
+- adding multi-seed ablation evidence and publication-style figures
+
+The generated [build history](/generated/build-history) page turns those moments into an evidence-backed chronology. Each entry is organized as:
+
+- `problem`: what was missing, broken, or noisy
+- `change`: what code or project artifact changed
+- `outcome`: what became easier to run, easier to trust, or easier to explain
+
+That page is generated from `git` history plus supporting files such as `BUGFIXES.md`, experiment timestamps, and limited local archived session traces. The goal is not to make every commit sound heroic. The goal is to help a reviewer understand which changes actually mattered.
+
