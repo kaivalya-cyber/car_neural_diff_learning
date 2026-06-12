@@ -122,6 +122,9 @@ Optimizes trained models for deployment using TorchScript tracing and freezing. 
 ### Sensor Augmenter
 Applies sensor dropout, noise, and occlusion augmentations to sensor readings during evaluation to test robustness. `utils/sensor_augmenter.py` provides both single and batch augmentation modes for stress-testing the policy under degraded sensor conditions, simulating real-world sensor failures. Run via `python3 main.py --mode sensor-augment`.
 
+### Console Dashboard
+Live-updating console-based training dashboard that displays reward, episode length, crash rate, difficulty, FPS, learning rate, and policy/value losses in a clean terminal layout. `utils/console_dash.py` uses terminal width detection and a progress bar for real-time training monitoring without a GUI. Run via `python3 main.py --mode console-dash`.
+
 ### Training Dashboards
 To eliminate threading pauses locking up the primary model trainer during rendering sequences, visualization runs entirely decoupled externally! `visualization/dashboard.py` runs Python's matplotlib async looping `logs/metrics.csv` reading generated scalars visually graphing the 100-episode Reward Moving Average vs the target Curriculum Difficulty level. 
 
