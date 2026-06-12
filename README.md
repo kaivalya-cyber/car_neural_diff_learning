@@ -98,6 +98,9 @@ Runs evaluation across multiple random seeds to produce robust, statistically me
 ### Training Profiler
 Measures per-section timing breakdown of the training loop: environment step, policy inference, memory append, PPO update, curriculum update, validation, and checkpoint saving. `utils/train_profiler.py` helps identify bottlenecks to optimize training throughput. Run via `python3 main.py --mode train-profile`.
 
+### Model Pruner
+Applies magnitude-based weight pruning to neural network models for reduced size and faster inference. `utils/model_pruner.py` provides sparsity reports per layer, prunes weights below a percentile threshold, and can retrain pruned models to recover accuracy. Run via `python3 main.py --mode model-prune`.
+
 ### Training Dashboards
 To eliminate threading pauses locking up the primary model trainer during rendering sequences, visualization runs entirely decoupled externally! `visualization/dashboard.py` runs Python's matplotlib async looping `logs/metrics.csv` reading generated scalars visually graphing the 100-episode Reward Moving Average vs the target Curriculum Difficulty level. 
 
