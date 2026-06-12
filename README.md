@@ -107,6 +107,9 @@ Compares two YAML configuration files side-by-side, highlighting every differenc
 ### Track Heatmapper
 Generates occupancy and crash-rate heatmaps by recording the agent's position and state across evaluation episodes. `utils/heatmap_gen.py` creates grid-based heatmaps showing where the agent spends most time and where crashes occur most frequently, saving data for visualization tools. Run via `python3 main.py --mode heatmap`.
 
+### Early Crash Detector
+Predicts imminent crashes by monitoring sensor proximity, velocity drops, and steering angular velocity spikes. `utils/crash_detector.py` provides real-time crash risk assessment (0.0-1.0) using a sliding window analysis, enabling proactive intervention before collisions occur. Run via `python3 main.py --mode crash-detect`.
+
 ### Training Dashboards
 To eliminate threading pauses locking up the primary model trainer during rendering sequences, visualization runs entirely decoupled externally! `visualization/dashboard.py` runs Python's matplotlib async looping `logs/metrics.csv` reading generated scalars visually graphing the 100-episode Reward Moving Average vs the target Curriculum Difficulty level. 
 
