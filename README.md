@@ -74,6 +74,9 @@ Validates YAML configuration files against an expected schema with type, range, 
 ### Model Summary
 Prints a detailed per-layer breakdown of the Policy (Actor) and Value (Critic) networks including output shapes and parameter counts. `utils/model_summary.py` also provides a model comparison utility for side-by-side architecture analysis. Run via `python3 main.py --mode model-summary`.
 
+### Reward Breakdown
+Tracks individual reward components (progress, speed zone, centerline, smoothness, time penalty, crash) across episodes. `utils/reward_breakdown.py` can log per-step breakdown during training and analyze logged CSV metrics post-hoc. Run via `python3 main.py --mode reward-breakdown`.
+
 ### Training Dashboards
 To eliminate threading pauses locking up the primary model trainer during rendering sequences, visualization runs entirely decoupled externally! `visualization/dashboard.py` runs Python's matplotlib async looping `logs/metrics.csv` reading generated scalars visually graphing the 100-episode Reward Moving Average vs the target Curriculum Difficulty level. 
 

@@ -334,6 +334,9 @@ if __name__ == "__main__":
     elif args.mode == "model-summary":
         from utils.model_summary import main as ms_main
         ms_main()
+    elif args.mode == "reward-breakdown":
+        from utils.reward_breakdown import main as rb_main
+        rb_main()
     elif args.mode == "validate":
         from utils.config_validator import validate_config_file
         paths = [os.path.join("configs", "hyperparameters.yaml"), os.path.join("configs", "presets")]
