@@ -104,6 +104,9 @@ Applies magnitude-based weight pruning to neural network models for reduced size
 ### Config Differ
 Compares two YAML configuration files side-by-side, highlighting every difference in a formatted table. `utils/config_diff.py` automatically diffs the default `hyperparameters.yaml` against all preset files when run without arguments, making it easy to spot configuration drift. Run via `python3 main.py --mode config-diff`.
 
+### Track Heatmapper
+Generates occupancy and crash-rate heatmaps by recording the agent's position and state across evaluation episodes. `utils/heatmap_gen.py` creates grid-based heatmaps showing where the agent spends most time and where crashes occur most frequently, saving data for visualization tools. Run via `python3 main.py --mode heatmap`.
+
 ### Training Dashboards
 To eliminate threading pauses locking up the primary model trainer during rendering sequences, visualization runs entirely decoupled externally! `visualization/dashboard.py` runs Python's matplotlib async looping `logs/metrics.csv` reading generated scalars visually graphing the 100-episode Reward Moving Average vs the target Curriculum Difficulty level. 
 
