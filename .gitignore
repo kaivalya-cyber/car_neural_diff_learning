@@ -9,3 +9,14 @@ rl_car_rl/**/__pycache__/
 rl_car_rl/.pytest_cache/
 portal/node_modules/
 portal/package-lock.json
+rl_car_rl/checkpoints/
+experiments/
+perplexity_bundle/
+.minimax/
+vpl/
+*.pth
+*.npz
+telemetry/
+heatmap_data.npz
+lr_finder_plot.png
+datasets/
